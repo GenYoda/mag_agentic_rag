@@ -1,0 +1,43 @@
+# ==================== Core Dependencies ====================
+python-dotenv==1.0.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# ==================== Azure Services ====================
+openai==1.54.0                    # Azure OpenAI
+azure-ai-formrecognizer==3.3.0    # Azure Document Intelligence
+azure-identity==1.15.0
+
+# ==================== Vector Store & Embeddings ====================
+faiss-cpu==1.7.4
+numpy==1.24.3
+sentence-transformers==2.2.2      # For cross-encoder reranking
+
+# ==================== Multi-Agent Framework ====================
+crewai>=0.80.0
+crewai-tools>=0.12.0
+
+# ==================== Data Processing ====================
+pandas==2.0.3
+PyPDF2==3.0.1                     # Fallback PDF reader if needed
+
+# ==================== Caching & Persistence ====================
+pickle5==0.0.12; python_version < '3.8'
+
+# ==================== Web Interface ====================
+streamlit==1.29.0
+
+# ==================== Utilities ====================
+python-dateutil==2.8.2
+tqdm==4.66.1                      # Progress bars
+loguru==0.7.2                     # Better logging
+
+# ==================== Testing ====================
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-mock==3.12.0
+
+# ==================== Development ====================
+black==23.12.1                    # Code formatting
+flake8==7.0.0                     # Linting
+mypy==1.8.0                       # Type checking
