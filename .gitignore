@@ -60,3 +60,4 @@ htmlcov/
 
 # Streamlit
 .streamlit/secrets.toml
+.venv
