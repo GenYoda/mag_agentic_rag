@@ -12,15 +12,20 @@ Design:
 - Thread-safe
 """
 
+
+
+
+
 from typing import Optional
 from functools import lru_cache
 import threading
 
 from openai import AzureOpenAI
-from azure.ai.formrecognizer import DocumentAnalysisClient
+from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
 
 from config.settings import azure_settings
+
 
 
 # Thread lock for singleton initialization
@@ -28,7 +33,8 @@ _lock = threading.Lock()
 
 # Client instances (initialized lazily)
 _openai_client: Optional[AzureOpenAI] = None
-_document_intelligence_client: Optional[DocumentAnalysisClient] = None
+_document_intelligence_client: Optional[DocumentIntelligenceClient] = None
+
 
 
 # ============================================================================
@@ -73,11 +79,13 @@ def reset_openai_client():
         _openai_client = None
 
 
+
+
 # ============================================================================
 # Azure Document Intelligence Client Factory
 # ============================================================================
 
-def get_document_intelligence_client() -> DocumentAnalysisClient:
+def get_document_intelligence_client() -> DocumentIntelligenceClient:
     """
     Get or create Azure Document Intelligence client (singleton).
     
@@ -85,11 +93,11 @@ def get_document_intelligence_client() -> DocumentAnalysisClient:
     Used for PDF text extraction with OCR support.
     
     Returns:
-        DocumentAnalysisClient: Configured Document Intelligence client
+        DocumentIntelligenceClient: Configured Document Intelligence client
         
     Example:
         >>> client = get_document_intelligence_client()
-        >>> poller = client.begin_analyze_document("prebuilt-read", document=file)
+        >>> result = client.begin_analyze_document(...)
     """
     global _document_intelligence_client
     
@@ -97,10 +105,13 @@ def get_document_intelligence_client() -> DocumentAnalysisClient:
         with _lock:
             # Double-check pattern
             if _document_intelligence_client is None:
+                from azure.ai.documentintelligence import DocumentIntelligenceClient
+                from azure.core.credentials import AzureKeyCredential
+                
                 credential = AzureKeyCredential(
                     azure_settings.azure_document_intelligence_key
                 )
-                _document_intelligence_client = DocumentAnalysisClient(
+                _document_intelligence_client = DocumentIntelligenceClient(
                     endpoint=azure_settings.azure_document_intelligence_endpoint,
                     credential=credential
                 )

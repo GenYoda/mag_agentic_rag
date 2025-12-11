@@ -96,6 +96,7 @@ TRACKER_FILE = INDEX_PATH / "pdf_tracker.json"
 CACHE_INDEX_FILE = CACHE_PATH / "cache_index.bin"
 CACHE_DATA_FILE = CACHE_PATH / "cache_data.json"
 
+
 # Memory specific paths
 MEMORY_DB_FILE = MEMORY_PATH / "conversation_memory.db"
 ENTITY_MEMORY_FILE = MEMORY_PATH / "entity_memory.json"
