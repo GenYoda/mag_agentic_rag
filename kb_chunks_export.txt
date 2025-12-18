@@ -1,0 +1,941 @@
+================================================================================
+KNOWLEDGE BASE CHUNKS EXPORT
+================================================================================
+
+Total Chunks: 36
+KB Version: b3b0a0431256bbbf
+Created: 2025-12-16T16:36:09.371575
+
+================================================================================
+
+CHUNK 1
+--------------------------------------------------------------------------------
+Source: 1_2.pdf
+Page: [1]
+Chunk Index: 0
+File Hash: 7443553a5749e861...
+
+Text:
+FOR FILING, STATE OGURT CLERK CHATHAM CO. GA. 12/20/2024 3; 4 PM
+In The State Court of Chatham Countycourt
+133 Montgomery Street, Room 501, Savannah, GA 31401
+www.statecourt.org . Phone (912) 652-7224 · FAX (912) 652-7229 . clerk@statecourt.org
+FRANK WARD, JR AND RACHEL WARD
+Plaintiff s
+STCV24-03188
+Case Number
+Vs.
+Savannah Health Services, LLC d/b/a Memorial Health
+University Medical Center; Brittany Roy, RN; Nephettia
+Robinson, RN; Rachel Tinker, RN; Sound Inpatient
+Physicians, Inc .; Everette Thombs, Jr. MD; The Neurological
+Institute of Savannah & Center for Spine, P.C. Christine
+Lokey, NP; Jane Does 1-5; and XYZ Corp 1-5
+Address of Defendant
+THE NEUROLOGICAL INSTITUTE OF
+SAVANNAH & CENTER FOR SPINE, PC
+RA: CARRIE C. BENNETT
+4E JACKSON BLVD.
+SAVANNAH, GA 31405
+Defendant S
+SUMMONS
+TO THE ABOVE NAMED DEFENDANT: THE NEUROLOGICAL INSTITUTE OF SAVANNAH &
+CENTER FOR SPINE
+Defendant'sAddress
+You are hereby summoned and required to efile (https://georgia.tylerhost.net/ofsweb/) with the Clerk of said Court
+and ser
+
+================================================================================
+
+CHUNK 2
+--------------------------------------------------------------------------------
+Source: 1_2.pdf
+Page: [1]
+Chunk Index: 1
+File Hash: 7443553a5749e861...
+
+Text:
+ THE NEUROLOGICAL INSTITUTE OF SAVANNAH &
+CENTER FOR SPINE
+Defendant'sAddress
+You are hereby summoned and required to efile (https://georgia.tylerhost.net/ofsweb/) with the Clerk of said Court
+and serve upon Plaintiff's Attorney, whose name and address is:
+BRYAN BAER
+THE BAER LAW FIRM 1819 PEACHTREE ROAD NE STE 401
+ATLANTA, GA 30309
+404-843-2237
+an answer to the complaint which is herewith served upon you, within 30 days after service of this summons upon you,
+exclusive of the day of service. If you fail to do so, Judgment by default will be taken against you for the relief demanded
+in the complaint.
+/s/ Kelliaun Hall
+Deputy Clerk, State Court of Chatham County
+CLERK OF COURT
+State Court of Chatham County
+Not valid until
+signed and sealed
+by a Deputy Court
+Clerk
+27. Summons 03-24-2021
+PRINT
+
+================================================================================
+
+CHUNK 3
+--------------------------------------------------------------------------------
+Source: 1_2.pdf
+Page: [2]
+Chunk Index: 0
+File Hash: 7443553a5749e861...
+
+Text:
+RECEIVED FOR FILING, STATE COURT CLERK CHATHAM CO. GA, 12/20/2024 3:24 PM
+7
+1
+- Clerk of Court
+IN THE STATE COURT OF CHATHAM COUNTY
+STATE OF GEORGIA
+FRANK WARD, JR. and RACHAEL WARD
+)
+Plaintiffs,
+)
+)
+)
+)
+)
+SAVANNAH HEALTH SERVICES, LLC d/b/a )
+MEMORIAL HEALTH UNIVERSITY
+)
+MEDICAL CENTER;
+)
+BRITTANY ROY, RN;
+)
+NEPHETTIA ROBINSON, RN;
+)
+RACHEL TINKER, RN
+)
+SOUND INPATIENT PHYSICIANS, INC .;
+)
+EVERETTE THOMBS, JR., M.D .;
+)
+THE NEUROLOGICAL INSTITUTE OF
+)
+SAVANNAH & CENTER FOR SPINE, P.C .;
+)
+CHRISTINE LOKEY, NP;
+)
+JANE DOES 1-5; and
+)
+XYZ CORP 1-5
+)
+)
+Defendants.
+CIVIL ACTION
+FILE NO. STCV24-03188
+JURY TRIAL DEMANDED
+COMPLAINT FOR DAMAGES
+COME NOW Frank Ward, Jr. and Rachael Ward ("Plaintiffs") and bring this Complaint for
+Damages by showing the Court and Jury as follows:
+Introduction
+1.
+Plaintiff Frank Ward suffered a stroke. The neurological team at Savannah Memorial
+Hospital performed a thrombectomy, and Mr. Ward was admitted to the intensive care unit (ICU).
+Mr. Ward's condition stabilized and his motor, co
+
+================================================================================
+
+CHUNK 4
+--------------------------------------------------------------------------------
+Source: 1_2.pdf
+Page: [2]
+Chunk Index: 1
+File Hash: 7443553a5749e861...
+
+Text:
+ed a stroke. The neurological team at Savannah Memorial
+Hospital performed a thrombectomy, and Mr. Ward was admitted to the intensive care unit (ICU).
+Mr. Ward's condition stabilized and his motor, cognitive and verbal function improved. Mr. Ward
+was discharged from the ICU to the main floor of the Hospital, where he was supposed to be
+1
+vs.
+
+================================================================================
+
+CHUNK 5
+--------------------------------------------------------------------------------
+Source: 1_4.pdf
+Page: [3]
+Chunk Index: 0
+File Hash: e191d6ab90f6e01f...
+
+Text:
+RECEIVED FOR FILING, STATE COURT CLERK CHATHAM CO. GA, 12/20/2024 3:24 PM
+- Clerk of Court
+7
+3
+frequently monitored for signs of neurological decline and treated appropriately. One of the known
+risk factors following a stroke like Mr. Ward had is swelling of the brain which will result in further
+brain damage if not recognized and promptly treated. While on the Hospital floor, Mr. Ward
+declined in verbal, cognitive and motor function which multiple providers noted, but failed to take
+appropriate action. After Mr. Ward started to decline, he had an MRI of his brain. The MRI showed
+a recent and evolving brain bleed which would explain Mr. Ward's decline and required immediate
+attention. Still, the Hospital did nothing. More than 30 hours after Mr. Ward's MRI exam, he had
+a CT Scan of his head, confirming a brain bleed and compression of his brainstem as a result of
+brain swelling. As a result of Defendants' delays, Mr. Ward suffered severe brain damage. Mr.
+Ward now requires around-the-clock care as a result of
+
+================================================================================
+
+CHUNK 6
+--------------------------------------------------------------------------------
+Source: 1_4.pdf
+Page: [3]
+Chunk Index: 1
+File Hash: e191d6ab90f6e01f...
+
+Text:
+eed and compression of his brainstem as a result of
+brain swelling. As a result of Defendants' delays, Mr. Ward suffered severe brain damage. Mr.
+Ward now requires around-the-clock care as a result of Defendants' lack of proper care.
+Parties, Jurisdiction and Venue
+2.
+Plaintiffs Frank Ward and Rachael Ward reside in Sparks, Nevada. Plaintiffs subject
+themselves to the jurisdiction and venue of this Court.
+3.
+Defendant Savannah Health Services, LLC d/b/a Memorial Health University Medical
+Center ("Memorial Health") owns and operates a hospital ("Hospital") located at 4700 Waters
+Ave., Savannah, Chatham County, Georgia 31404. Memorial Health is part of a provider network
+and subsidiary of HCA Healthcare and as such has its principal place of business located at One
+Park Plaza, Nashville, Tennessee 37203. Defendant Memorial Health may be served with process
+upon its registered agent The Corporation Company at 410 Peachtree Parkway Suite 4245,
+Cumming, Forsyth County, Georgia 30041.
+2
+
+================================================================================
+
+CHUNK 7
+--------------------------------------------------------------------------------
+Source: 1_4.pdf
+Page: [3]
+Chunk Index: 2
+File Hash: e191d6ab90f6e01f...
+
+Text:
+Memorial Health may be served with process
+upon its registered agent The Corporation Company at 410 Peachtree Parkway Suite 4245,
+Cumming, Forsyth County, Georgia 30041.
+2
+
+================================================================================
+
+CHUNK 8
+--------------------------------------------------------------------------------
+Source: 1_4.pdf
+Page: [4]
+Chunk Index: 0
+File Hash: e191d6ab90f6e01f...
+
+Text:
+RECEIVED FOR FILING, STATE COURT CLERK CHATHAM CO. GA, 12/20/2024 3:24 PM
+7
+1
+-
+- Clerk of Court
+4.
+Defendant Brittany Roy, RN ("Nurse Roy") is a registered nurse and resident of Liberty
+County, Georgia. She may be served with process at the following address: 49 Liberty Woods Dr.,
+Fort Stewart, Georgia 31315.
+5.
+At all times material hereto, Defendant Nurse Roy was an employee, agent and/or
+ostensible agent of Defendant Memorial Health and was acting within the course and scope of her
+employment and/or agency with Memorial Health. As such, Memorial Health is liable to Plaintiffs
+under respondeat superior and/or agency theories for her negligent actions.
+6.
+Defendant Nephettia Robinson, RN ("Nurse Robinson") is a registered nurse and resident
+of Effingham County, Georgia. She may be served with process at the following address: 207
+Moultrie Dr., Rincon, Georgia 31326.
+7.
+At all times material hereto, Defendant Nurse Robinson was an employee, agent and/or
+ostensible agent of Defendant Memorial Health and was a
+
+================================================================================
+
+CHUNK 9
+--------------------------------------------------------------------------------
+Source: 1_4.pdf
+Page: [4]
+Chunk Index: 1
+File Hash: e191d6ab90f6e01f...
+
+Text:
+lowing address: 207
+Moultrie Dr., Rincon, Georgia 31326.
+7.
+At all times material hereto, Defendant Nurse Robinson was an employee, agent and/or
+ostensible agent of Defendant Memorial Health and was acting within the course and scope of her
+employment and/or agency with Memorial Health. As such, Memorial Health is liable to Plaintiffs
+under respondeat superior and/or agency theories for her negligent actions.
+8.
+Defendant Rachel Tinker, RN ("Nurse Tinker") is a registered nurse and resident of
+Chatham County, Georgia. She may be served with process at the following address: 8 Elmwood
+Pl., Savannah, Georgia 31419.
+3
+
+================================================================================
+
+CHUNK 10
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [1]
+Chunk Index: 0
+File Hash: 6b14530876c3be2a...
+
+Text:
+Name: Frank Delino Jr. Ward.
+Claimant Date of Birth: 11/12/1969.
+Date of Loss: February 27, 2023.
+Claim #: IQBM012099, IQBM012103
+Claim Information:
+Claim #: IQBM012099, IQBM012103
+Claimant Name: Frank Delino Jr. Ward.
+Date of Birth: 11/12/1969.
+Date of Alleged Injury: February 27, 2023.
+Insured Defendant(s): - Savannah Health Services, LLC d/b/a Memorial Health University Medical Center
+. Brittany Roy, RN
+· Nephettia Robinson, RN
+. Rachel Tinker, RN
+. Sound Inpatient Physicians, Inc.
+· Everette Thombs, Jr., MD
+. The Neurological Institute of Savannah & Center for Spine, P.C.
+· Christine Lokey, NP
+· Jane Does 1-5
+· XYZ Corp 1-5
+List of Facilities involved with services:
+Aya Healthcare Local, Aya Healthcare Services, Baer Law Firm, Blue Cross, Bowen Painter, Brooks
+Rehabilitation Hospital, Ciox Health, Inc., Kaiser Permanente, LLC., Memorial Health University Medical
+Center, Neurological Institute of Savannah & Center for Spine, Ontellus, Renown Regional Medical Center,
+Sound Inpatient Physicians, Walgreens
+Li
+
+================================================================================
+
+CHUNK 11
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [1]
+Chunk Index: 1
+File Hash: 6b14530876c3be2a...
+
+Text:
+r Permanente, LLC., Memorial Health University Medical
+Center, Neurological Institute of Savannah & Center for Spine, Ontellus, Renown Regional Medical Center,
+Sound Inpatient Physicians, Walgreens
+List of Providers:
+Aksenov, Allan M., Ashley, CCC-SLP; Chambliss, CCC-SLP; Graupmann, CCC-SLP; Hicks, CCC-SLP; Perez,
+Carlton R., Carol, Casey H., Christopher, Claire, Colin, DO; Stephens, Daniel M., Danielle, Domenick, Dominic,
+Emily, Everette B., Geoffrey, Holly, Igor, Jessica, Julie, Kathia A., Kristen, Krystine, Logan, MD; Glass, MD;
+Kemp, MD; Morris, MD; Ortiz-Cantillo, MD; Peterson, MD; Rivera, MD; Roma, MD; Taaca, MD; Thombs, MD;
+Zamora, Marc, Mary, NP; Edwards, NP; White, OT; Conger, OT; Robinson, OT; Tinney, Osman, PT; Graham,
+PT; Schivera, RN; Barnette, RN; Barreiro, RN; Beecher, RN; Conger, RN; Jones, RN; Jowers, RN; Kinsey, RN;
+Moser, RN; Rehman, RN; Shetler, RN; Strickland, RN; Vaughn, RN; Wood, RT., RT; Kimball, RT; Tjersland,
+Rebecca, Regina, Samantha N., Sarah Ellen E., Sintya, Spencer H., Sumbal
+
+================================================================================
+
+CHUNK 12
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [1]
+Chunk Index: 2
+File Hash: 6b14530876c3be2a...
+
+Text:
+wers, RN; Kinsey, RN;
+Moser, RN; Rehman, RN; Shetler, RN; Strickland, RN; Vaughn, RN; Wood, RT., RT; Kimball, RT; Tjersland,
+Rebecca, Regina, Samantha N., Sarah Ellen E., Sintya, Spencer H., Sumbal
+
+================================================================================
+
+CHUNK 13
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [2]
+Chunk Index: 0
+File Hash: 6b14530876c3be2a...
+
+Text:
+Summary of Allegations:
+The plaintiff alleges that Mr. Ward suffered severe brain damage, including uncal herniation, brainstem
+compression, and subfalcine herniation, due to delays and failures in medical care following his stroke. Specific
+negligent acts include failure to perform timely neurological assessments, failure to notify physicians of his
+declining condition, delays in imaging (MRI and CT scans), and failure to act on test results showing evolving
+brain injury. These delays led to worsening brain swelling, requiring an emergent decompressive
+hemicraniectomy on February 27, 2023. The resulting harm includes permanent brain damage, loss of motor,
+cognitive, and verbal functions, respiratory complications, and the need for prolonged hospitalization,
+tracheostomy, and rehabilitation. Mr. Ward now requires around-the-clock care, has lost the ability to work, and
+suffers from permanent disability, loss of enjoyment of life, and mental anguish. Damages claimed include
+medical expenses, lost wages, pain a
+
+================================================================================
+
+CHUNK 14
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [2]
+Chunk Index: 1
+File Hash: 6b14530876c3be2a...
+
+Text:
+ around-the-clock care, has lost the ability to work, and
+suffers from permanent disability, loss of enjoyment of life, and mental anguish. Damages claimed include
+medical expenses, lost wages, pain and suffering, permanent disability, loss of capacity to work, and Mrs.
+Ward's loss of consortium.
+Role(s) of Defendant(s):
+The defendants' roles and responsibilities in this patient's care included:
+. Facility: Memorial Health University Medical Center provided care.
+. Medical Professionals Involved:
+. Brittany Roy, RN: Failed to inform a physician of the patient's condition changes and delayed transport
+for a STAT CT scan.
+. Nephettia Robinson, RN: Neglected neurological assessments and failed to report the patient's
+condition changes.
+. Rachel Tinker, RN: Failed to report the patient's condition changes after a neurological assessment.
+. Everette Thombs, Jr., M.D .: Physician responsible for care under Sound Inpatient Physicians.
+. Carol White, RN: Inserted and managed IVs.
+. Rene Russell, RN: Inserted a PICC l
+
+================================================================================
+
+CHUNK 15
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [2]
+Chunk Index: 2
+File Hash: 6b14530876c3be2a...
+
+Text:
+rological assessment.
+. Everette Thombs, Jr., M.D .: Physician responsible for care under Sound Inpatient Physicians.
+. Carol White, RN: Inserted and managed IVs.
+. Rene Russell, RN: Inserted a PICC line.
+If a role is not explicitly stated, it is not mentioned in the provided documentation.
+Synopsis:
+The claimant is a 53-year-old male and former truck driver with a pre-existing medical history of type 2 diabetes
+mellitus (E11.9), hypertension (110), hyperlipidemia (E78.5), class 2 obesity (E66.9), and a history of deep vein
+thrombosis (182.90). His past surgical history includes external ear surgery. Prior to this incident, he was on
+chronic medications including antihypertensives (Carvedilol 6.25 mg BID), statins (Atorvastatin 80 mg daily),
+and insulin for diabetes management, though he had transitioned to diet-controlled diabetes. Relevant risk
+factors include obesity (BMI 37.5), hypertension, and a family history of lung cancer. On February 17, 2023, the
+claimant experienced an acute onset of left-sided we
+
+================================================================================
+
+CHUNK 16
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [2]
+Chunk Index: 3
+File Hash: 6b14530876c3be2a...
+
+Text:
+controlled diabetes. Relevant risk
+factors include obesity (BMI 37.5), hypertension, and a family history of lung cancer. On February 17, 2023, the
+claimant experienced an acute onset of left-sided weakness, slurred speech, and facial droop while at a gas
+station. His initial vital signs included a blood pressure of 206/110 mmHg and a blood glucose level of 253
+mg/dL. Examination revealed left-sided hemiplegia, neglect, and right gaze deviation, with an NIHSS score of
+16. Imaging at the outside hospital showed a right M1 occlusion on CT angiogram, with no hemorrhage on CT
+head. The initial diagnosis was acute ischemic stroke due to right MCA occlusion. Emergency treatment
+included administration of TNK at 07:52 and initiation of a Cardene drip for blood pressure control before
+transfer to Memorial Health for urgent thrombectomy.
+
+================================================================================
+
+CHUNK 17
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [3]
+Chunk Index: 0
+File Hash: 6b14530876c3be2a...
+
+Text:
+The patient, admitted on 2/17/2023 with a right MCA M1 occlusion, developed significant cerebral edema and
+herniation evidenced by a 1.5 cm right-to-left subfalcine herniation and 1 cm right uncal herniation with
+brainstem compression on 2/27/2023, necessitating an emergent right decompressive hemicraniectomy with
+subdural ICP monitor placement performed by Dr. Suh. Postoperatively, he experienced respiratory
+complications, including intubation on 2/27/2023, extubation on 3/6/2023, reintubation on 3/7/2023 due to
+mucus plugging, and a tracheostomy on 3/10/2023, followed by ventilator weaning and eventual tracheostomy
+decannulation on 5/2/2023. Cardiac complications included a witnessed cardiac arrest on 4/12/2023 due to
+acute blood loss anemia (ABLA) from bleeding at the IVC puncture site, with return of spontaneous circulation
+(ROSC) after one round of ACLS. Renal complications involved acute kidney injury requiring dialysis initiated
+on 3/27/2023, with the last session on 4/7/2023 and subsequent full recove
+
+================================================================================
+
+CHUNK 18
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [3]
+Chunk Index: 1
+File Hash: 6b14530876c3be2a...
+
+Text:
+ous circulation
+(ROSC) after one round of ACLS. Renal complications involved acute kidney injury requiring dialysis initiated
+on 3/27/2023, with the last session on 4/7/2023 and subsequent full recovery. Infectious complications included
+right basilar pneumonia caused by MSSA, MRSA, and Pseudomonas, treated with Zosyn and linezolid. A PEG
+tube was placed on 3/21/2023 due to dysphagia. Additional complications included anemia of chronic disease,
+acute blood loss anemia from procedural bleeding, and pressure injuries.
+Frank Ward underwent a cranioplasty with bone flap replacement on 6/22/2023 performed by Dr. Daniel Suh
+using his original bone flap, secured with cranial plates and screws, with postoperative imaging showing
+pneumocephalus and stable findings without significant midline shift. He was transferred to Brooks
+Rehabilitation on 6/28/2023 for intensive inpatient therapies, including physical therapy (PT), occupational
+therapy (OT), and speech therapy (ST). Functional progress included improved toleranc
+
+================================================================================
+
+CHUNK 19
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [3]
+Chunk Index: 2
+File Hash: 6b14530876c3be2a...
+
+Text:
+rooks
+Rehabilitation on 6/28/2023 for intensive inpatient therapies, including physical therapy (PT), occupational
+therapy (OT), and speech therapy (ST). Functional progress included improved tolerance to sitting and
+participation in dynamic reaching tasks, but he remains significantly limited by left hemiplegia, requiring
+maximum assistance for transfers and ADLs. Diagnoses confirmed by medical professionals include acute
+ischemic right MCA stroke (163.9), left hemiparesis (G81.94), spasticity, dysphagia (R13.10), pain in the left
+upper extremity, deep vein thrombosis (182.90), type 2 diabetes mellitus (E11.9), hypertension (110),
+hyperlipidemia (E78.5), pressure injuries, incontinence, and skull defect post-craniectomy (S02.91XS). The
+claimant's ongoing symptoms include left hemiplegia with strength grade 0/5 in the left lower extremity and
+limited ROM in the left upper extremity, severe pain in the left shoulder, spasticity, wheelchair dependence with
+Hoyer lift for transfers, and complete dependence for A
+
+================================================================================
+
+CHUNK 20
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [3]
+Chunk Index: 3
+File Hash: 6b14530876c3be2a...
+
+Text:
+n the left lower extremity and
+limited ROM in the left upper extremity, severe pain in the left shoulder, spasticity, wheelchair dependence with
+Hoyer lift for transfers, and complete dependence for ADLs such as feeding, grooming, dressing, and toileting.
+Cognitive impairments include decreased safety judgment, awareness of errors, and attention span. Dysphagia
+persists, though he tolerates oral intake, with a PEG tube in place as needed.
+The causation of the injuries is attributed to an embolic stroke caused by a right M1 occlusion, leading to
+ischemia, infarct, and significant cerebral edema with subsequent right uncal herniation and subfalcine
+herniation. Contributing factors included uncontrolled type 2 diabetes, hypertension, and obesity, as well as
+complications such as deep vein thrombosis (DVT) and acute kidney injury. Delays in treatment, including the
+progression of herniation before decompressive craniectomy on 2/27/2023, and subsequent complications like
+respiratory failure, anemia from procedural
+
+================================================================================
+
+CHUNK 21
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [3]
+Chunk Index: 4
+File Hash: 6b14530876c3be2a...
+
+Text:
+kidney injury. Delays in treatment, including the
+progression of herniation before decompressive craniectomy on 2/27/2023, and subsequent complications like
+respiratory failure, anemia from procedural bleeding, and recurrent infections, exacerbated the patient's
+condition, resulting in permanent disability. Prognosis remains poor, with the patient experiencing persistent
+left-sided weakness, spasticity, and cognitive deficits. Maximum medical improvement (MMI) has not been
+reached, as ongoing rehabilitation and therapy are required. The patient remains dependent on assistive
+devices, including a helmet for protection, and requires 24/7 care and continued physical, occupational, and
+speech therapy to manage deficits and prevent further decline.
+Office visits and encounters have included neurological, physical, and psychiatric follow-ups, with diagnostic
+imaging such as CT scans (e.g., 2/21/23, 2/27/23, 4/1/23, 4/8/23), MRIs (e.g., 2/26/23), and ultrasounds (e.g.,
+carotid Doppler on 2/17/23). Laboratory testing
+
+================================================================================
+
+CHUNK 22
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [3]
+Chunk Index: 5
+File Hash: 6b14530876c3be2a...
+
+Text:
+ psychiatric follow-ups, with diagnostic
+imaging such as CT scans (e.g., 2/21/23, 2/27/23, 4/1/23, 4/8/23), MRIs (e.g., 2/26/23), and ultrasounds (e.g.,
+carotid Doppler on 2/17/23). Laboratory testing, including A1c (10.3), and EKGs were also conducted.
+Procedures performed include a partially successful thrombectomy on 2/17/23, right decompressive
+hemicraniectomy and subdural ICP monitor placement on 2/27/23, tracheostomy on 3/10/23, PEG tube
+insertion on 3/21/23, and IVC filter placement on 3/3/23 (removed 3/14/23). Treatments have included acute
+
+================================================================================
+
+CHUNK 23
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [4]
+Chunk Index: 0
+File Hash: 6b14530876c3be2a...
+
+Text:
+stroke management with TNK thrombolytics and thrombectomy, ICU care with hyperosmolar therapy (3% saline
+and mannitol), and seizure prophylaxis with Keppra. Medications included anticoagulation (Lovenox, Eliquis),
+antihypertensives (Norvasc, clonidine, hydralazine, losartan), statins (atorvastatin), diabetes management
+(insulin glargine, insulin lispro), antidepressants (fluoxetine), and pain management (oxycodone,
+acetaminophen). Supportive care involved ventilator weaning, enteral nutrition via PEG, physical and
+occupational therapy, and management of complications like anemia, dysphagia, and DVTs.
+The current treatment plan includes ongoing physical, occupational, and speech therapy to address functional
+deficits, pain and spasticity management through interventions like stretching and positioning, home health
+support, and a regular follow-up schedule to monitor progress. The claimant has not reached maximal medical
+improvement and continues to require maximum assistance for all ADLs, is wheelchair-depende
+
+================================================================================
+
+CHUNK 24
+--------------------------------------------------------------------------------
+Source: synopsis_mag.pdf
+Page: [4]
+Chunk Index: 1
+File Hash: 6b14530876c3be2a...
+
+Text:
+
+support, and a regular follow-up schedule to monitor progress. The claimant has not reached maximal medical
+improvement and continues to require maximum assistance for all ADLs, is wheelchair-dependent, requires a
+Hoyer lift for transfers, and cannot return to work or perform prior duties. Documented restrictions include no
+driving, lifting limits, and overhead activity restrictions, along with the need for assistive devices such as a
+hospital bed, specialty wheelchair, and helmet. Recommendations emphasize a safe home environment and
+close medical follow-up to ensure ongoing care and safety.
+
+================================================================================
+
+CHUNK 25
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [1]
+Chunk Index: 0
+File Hash: cb39e0fb300abba4...
+
+Text:
+RECEIVED FOR FILING, STATE COURT CLERK CHATHAM CO. GA, 12/20/2024 3:24 PM
+wind - Clerk of Court
+9.
+At all times material hereto, Defendant Nurse Tinker was an employee, agent and/or
+ostensible agent of Defendant Memorial Health and was acting within the course and scope of her
+employment and/or agency with Memorial Health. As such, Memorial Health is liable to Plaintiffs
+under respondeat superior and/or agency theories for her negligent actions.
+10.
+Defendant Sound Inpatient Physicians, Inc.'s ("Sound Physicians") principal place of
+business is located at 120 Brentwood Commons Way, Suite 510, Brentwood, Tennessee 37027.
+Defendant Sound Physicians may be served with process upon its registered agent Corporation
+Service Company at 2 Sun Court, Suite 400, Peachtree Corners, Gwinnett County, Georgia 30092.
+11.
+Defendant Everette Thombs, Jr., M.D. ("Dr. Thombs") is a physician and resident of
+Chatham County, Georgia. He may be served with process at the following address: 126 Goette
+Trl, Savannah, Georgia 31410.
+1
+
+================================================================================
+
+CHUNK 26
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [1]
+Chunk Index: 1
+File Hash: cb39e0fb300abba4...
+
+Text:
+ant Everette Thombs, Jr., M.D. ("Dr. Thombs") is a physician and resident of
+Chatham County, Georgia. He may be served with process at the following address: 126 Goette
+Trl, Savannah, Georgia 31410.
+12
+At all times material hereto, Defendant Dr. Thombs was an employee, agent and/or
+ostensible agent of Defendant Sound Physicians and was acting within the course and scope of his
+employment and/or agency with Sound Physicians. As such, Sound Physicians is liable to
+Plaintiffs under respondeat superior and/or agency theories for his negligent actions.
+13.
+Defendant The Neurological Institute of Savannah & Center for Spine, P.C. ("The
+Neurological Institute") is a resident of Chatham County, Georgia with its principal place of
+business located at 4E Jackson Blvd., Savannah, GA, 31405. Defendant The Neurological Institute
+4
+
+================================================================================
+
+CHUNK 27
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [2]
+Chunk Index: 0
+File Hash: cb39e0fb300abba4...
+
+Text:
+RECEIVED FOR FILING, STATE COURT CLERK CHATHAM CO. GA, 12/20/2024 3:24 PM
+> wind - Clerk of Court
+of Savannah & Center for Spine, P.C. may be served with process upon its registered agent Carrie
+C. Bennett at 4E Jackson Blvd., Savannah, Georgia, 31405.
+14.
+Defendant Christine Lokey, NP ("NP Lokey") is a nurse practitioner and resident of
+Chatham County, Georgia. She may be served with process at the following address: 7 Franklin
+Creek Rd. S., Savannah, Georgia 31411.
+15.
+At all times material hereto, Defendant NP Lokey was an employee, agent and/or ostensible
+agent of Defendant The Neurological Institute and was acting within the course and scope of her
+employment and/or agency with The Neurological Institute. As such, The Neurological Institute
+is liable to Plaintiffs under respondeat superior and/or agency theories for her negligent actions.
+16.
+Jane Doe (1-5) are unknown physicians, nurses and medical practitioners at Memorial
+Health who were responsible for the care of Mr. Ward while he was a patient at M
+
+================================================================================
+
+CHUNK 28
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [2]
+Chunk Index: 1
+File Hash: cb39e0fb300abba4...
+
+Text:
+ries for her negligent actions.
+16.
+Jane Doe (1-5) are unknown physicians, nurses and medical practitioners at Memorial
+Health who were responsible for the care of Mr. Ward while he was a patient at Memorial Health
+and whose negligent conduct proximately caused Mr. Ward's injuries.
+17.
+Defendants XYZ Corp (1-5) are unknown entities which bear responsibility under theories
+of direct negligence, as well as vicarious liability through the negligent conduct of their agents,
+which proximately caused Mr. Ward's injuries.
+18.
+Pursuant to the facts alleged herein and O.C.G.A. §§ 9-10-31 and 14-2-510(b)(1), venue
+and jurisdiction are proper against all Defendants in this Court.
+5
+
+================================================================================
+
+CHUNK 29
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [3]
+Chunk Index: 0
+File Hash: cb39e0fb300abba4...
+
+Text:
+RECEIVED FOR FILING, STATE COURT CLERK CHATHAM CO. GA, 12/20/2024 3:24 PM
+7
+1
+.
+- Clerk of Court
+Factual Allegations
+19.
+On February 17, 2023, Frank Ward suffered a stroke and was brought to St. Joseph's
+Candler Hospital. A CT scan of his head and CT angiogram were performed and revealed a right
+M1 occlusion. He was given labetalol, started on Cardene drip, and given Tenecteplase.
+20
+Mr. Ward was then transferred to Savannah Memorial Hospital ("Savannah Memorial" or
+"Hospital") at around 8:56a.m. on February 17, 2023.
+21.
+When he arrived at Savannah Memorial, Mr. Ward was taken for an urgent thrombectomy
+of the right middle cerebral artery. As a result of the thrombectomy, Mr. Ward had reported
+improved blood flow.
+22
+Following the thrombectomy, Mr. Ward was transferred to the Intensive Care Unit ("ICU")
+for continued monitoring and a higher level of care.
+23.
+One concern for patients who have suffered stroke is brain swelling that often occurs as a
+consequence of the stroke. If the brain swells too much, the
+
+================================================================================
+
+CHUNK 30
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [3]
+Chunk Index: 1
+File Hash: cb39e0fb300abba4...
+
+Text:
+inued monitoring and a higher level of care.
+23.
+One concern for patients who have suffered stroke is brain swelling that often occurs as a
+consequence of the stroke. If the brain swells too much, the swelling will cause further injury and
+possible hemorrhage to the brain.
+24.
+To control the swelling, Plaintiff's treating neurosurgeon, Dr. Daniel Suh, ordered a 3%
+saline solution which was delivered to Mr. Ward starting on February 19, 2023.
+25.
+6
+
+================================================================================
+
+CHUNK 31
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [4]
+Chunk Index: 0
+File Hash: cb39e0fb300abba4...
+
+Text:
+RECEIVED FOR FILING, STATE COURT CLERK CHATHAM CO. GA, 12/20/2024 3:24 PM
+1
+7
+.
+3
+- Clerk of Court
+Furthermore, on February 17, 2023, an order was entered by Kathleen Humkey, MD to
+perform neurological checks every hour.
+26.
+Between February 17 and February 23, 2023, Mr. Ward's physical, cognitive, and verbal
+condition improved.
+27.
+On February 23, 2023 at 2:14a.m., a CT scan of Mr. Ward's showed "evolving large right
+MCA subacute infarct with stable mass effect and leftward midline shift of 5 mm, stable."
+28.
+At 11:06a.m., Dr. Osman Perez noted that Mr. Ward had a stable neurological exam and a
+stable CT scan. He further noted that Mr. Ward's best verbal response was "oriented", and his best
+motor response was "obeys commands." He also noted that an MRI was pending.
+29
+At 11:23a.m., Dr. Suh noted that Mr. Ward's repeat CT scan was "stable with minimal
+shift no change." His plan was to continue with aggressive ICU care with 3% hypertonic saline
+and to slowly taper the hypertonic saline so his sodium could sta
+
+================================================================================
+
+CHUNK 32
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [4]
+Chunk Index: 1
+File Hash: cb39e0fb300abba4...
+
+Text:
+ repeat CT scan was "stable with minimal
+shift no change." His plan was to continue with aggressive ICU care with 3% hypertonic saline
+and to slowly taper the hypertonic saline so his sodium could start to trend down.
+30.
+On February 24, 2023, at 2:38a.m., a CT scan showed "Large subacute right MCA territory
+infarct is again noted with stable mass effect and leftward midline shift of 5 mm, previously 5
+mm." The impression was again noted as stable.
+31
+At 10:49a.m. on February 24, 2023, Mr. Ward was discharged from the ICU to the internal
+medicine service on the medical floor of the Hospital (the "floor").
+7
+
+================================================================================
+
+CHUNK 33
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [5]
+Chunk Index: 0
+File Hash: cb39e0fb300abba4...
+
+Text:
+RECEIVED FOR FILING, STATE COURT CLERK CHATHAM CO. GA, 12/20/2024 3:24 PM
+1
+VINOS
+- Clerk of Court
+32.
+Before being discharged to the floor, Mr. Ward's saline therapy was discontinued.
+33.
+From 6:00a.m. until 4:00pm. on February 24, 2023, the nursing flowsheets all indicate
+the following:
+Eye Opening: Spontaneous
+Best Verbal Response: Oriented
+Best Motor Response: Obeys Commands
+Glasgow Coma Scale: 15
+34.
+At 5:49p.m. on February 24, 2023, Rachel Tinker, RN signed an order that was authorized
+by Thomas Allen, PA to perform neurological checks every four hours from February 24, 2023 at
+8:00p.m. until otherwise specified.
+35.
+Periodic neurological checks were necessary since Mr. Ward remained at risk for brain
+swelling, subsequent stroke or other adverse neurological events. A decline in motor, verbal or
+cognitive ability would be a sign that Mr. Ward required immediate medical attention and warrant
+additional diagnostic imaging, such as a CT Scan, to rule out additional brain injury as a cause of
+the decline.
+3
+
+================================================================================
+
+CHUNK 34
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [5]
+Chunk Index: 1
+File Hash: cb39e0fb300abba4...
+
+Text:
+bility would be a sign that Mr. Ward required immediate medical attention and warrant
+additional diagnostic imaging, such as a CT Scan, to rule out additional brain injury as a cause of
+the decline.
+36.
+At 7:28p.m. on February 24, 2023, Dr. Suh noted that Mr. Ward was stable overnight and
+was moved to the floor. He indicated that the repeat CT scan from that morning was "stable with
+minimal shift no change." His neurological exam noted the following: "sleeping but arouses. Left
+hemiplegia. States name and following commands briskly on the right."
+8
+
+================================================================================
+
+CHUNK 35
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [6]
+Chunk Index: 0
+File Hash: cb39e0fb300abba4...
+
+Text:
+RECEIVED FOR FILING, STATE COURT CLERK CHATHAM CO. GA, 12/20/2024 3:24 PM
+wind - Clerk of Court
+37.
+There were no documented nursing neurological assessments from 4:00p.m. on February
+24, 2023 through 8:00a.m. on February 25, 2023.
+38.
+At 8:00a.m. on February 25, 2023, the nursing assessment was as follows:
+Eye Opening: To Sound
+Best Verbal Response: Confused
+Best Motor Response: Obeys Commands
+Glasgow Coma Scale: 13
+39.
+Despite this decline in Mr. Ward's neurological exam from the day before, the nurses did
+not inform any physicians regarding Mr. Ward's change in condition.
+40.
+A 12:02 on February 25, 2023, Nurse Rachel Tinker noted the following:
+Problem: Cerebral Alteration
+Goal: Improve-Cerebral Alteration
+Description: Change in or modification of mental process
+Flowsheets (Taken 2/25/2023 1203)
+Cerebral Alteration Outcomes: Stabilizing
+Problem: Comfort Alteration
+Goal: Improve- Comfort Alteration
+Description: Change in or modification of sensation that is distressing
+Flowsheets (Taken 2/25/2023 1203)
+Com
+
+================================================================================
+
+CHUNK 36
+--------------------------------------------------------------------------------
+Source: trimmed_complaint.pdf
+Page: [6]
+Chunk Index: 1
+File Hash: cb39e0fb300abba4...
+
+Text:
+ration Outcomes: Stabilizing
+Problem: Comfort Alteration
+Goal: Improve- Comfort Alteration
+Description: Change in or modification of sensation that is distressing
+Flowsheets (Taken 2/25/2023 1203)
+Comfort Alteration Outcomes: Stabilizing
+41.
+At 12:13p.m., Mr. Ward was seen by Christine Lokey, NP with the neurosurgery team. NP
+Lokey noted that Mr. Ward was doing well and talking. However, she further noted that Mr.
+9
+
+================================================================================
+

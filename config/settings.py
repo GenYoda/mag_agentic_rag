@@ -12,7 +12,12 @@ from pydantic_settings import BaseSettings
 from pathlib import Path
 from typing import Literal
 
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
 # ============================================================================
 # SECTION 1: Azure Credentials & Endpoints (from .env)
 # ============================================================================
@@ -29,6 +34,7 @@ class AzureSettings(BaseSettings):
         alias="AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT",
         description="Azure Document Intelligence endpoint URL"
     )
+    
     azure_document_intelligence_key: str = Field(
         ...,
         alias="AZURE_DOCUMENT_INTELLIGENCE_KEY",
@@ -41,21 +47,25 @@ class AzureSettings(BaseSettings):
         alias="AZURE_OPENAI_ENDPOINT",
         description="Azure OpenAI endpoint URL"
     )
+    
     azure_openai_key: str = Field(
         ...,
         alias="AZURE_OPENAI_KEY",
         description="Azure OpenAI API key"
     )
+    
     azure_openai_api_version: str = Field(
         ...,
         alias="AZURE_OPENAI_API_VERSION",
         description="Azure OpenAI API version"
     )
+    
     azure_openai_embedding_deployment: str = Field(
         ...,
         alias="AZURE_OPENAI_EMBEDDING_DEPLOYMENT",
         description="Azure OpenAI embedding model deployment name"
     )
+    
     azure_openai_chat_deployment: str = Field(
         ...,
         alias="AZURE_OPENAI_CHAT_DEPLOYMENT",
@@ -67,10 +77,8 @@ class AzureSettings(BaseSettings):
         env_file_encoding = "utf-8"
         case_sensitive = False
 
-
 # Singleton instance
 azure_settings = AzureSettings()
-
 
 # ============================================================================
 # SECTION 2: Paths & Directories
@@ -96,11 +104,9 @@ TRACKER_FILE = INDEX_PATH / "pdf_tracker.json"
 CACHE_INDEX_FILE = CACHE_PATH / "cache_index.bin"
 CACHE_DATA_FILE = CACHE_PATH / "cache_data.json"
 
-
 # Memory specific paths
 MEMORY_DB_FILE = MEMORY_PATH / "conversation_memory.db"
 ENTITY_MEMORY_FILE = MEMORY_PATH / "entity_memory.json"
-
 
 # ============================================================================
 # SECTION 3: PDF Processing & Chunking
@@ -115,16 +121,14 @@ DOC_INTEL_MODEL = "prebuilt-read"  # For medical documents with handwriting
 DOC_INTEL_PAGES = None  # Process all pages
 DOC_INTEL_LOCALE = "en-US"
 
-
 # ============================================================================
 # SECTION 4: Embeddings
 # ============================================================================
 
-EMBEDDING_DIMENSION = 3072  # text-embedding-3-small
+EMBEDDING_DIMENSION = 3072  # text-embedding-3-large
 EMBEDDING_BATCH_SIZE = 100  # Batch size for embedding generation
 EMBEDDING_MAX_RETRIES = 3
 EMBEDDING_RETRY_DELAY = 2  # seconds
-
 
 # ============================================================================
 # SECTION 5: Knowledge Base Settings
@@ -137,7 +141,6 @@ ENABLE_CHUNK_DEDUPLICATION = True
 # Autosync
 ENABLE_AUTOSYNC = True
 AUTOSYNC_ON_STARTUP = False  # Set to True for automatic sync on app start
-
 
 # ============================================================================
 # SECTION 6: Retrieval Settings
@@ -152,34 +155,64 @@ MIN_CHUNKS_RETURNED = 3  # Always return at least this many
 ENABLE_MULTI_STRATEGY = True
 RECIPROCAL_RANK_K = 60  # RRF constant
 
-
 # ============================================================================
-# SECTION 7: Query Enhancement Settings
-# ============================================================================
-
-ENABLE_QUERY_ENHANCEMENT = True
-ENABLE_QUERY_CLASSIFICATION = True
-
-# HyDE settings
-ENABLE_HYDE = True
-HYDE_FOR_SIMPLE_QUERIES = False  # Only use for complex/high-level queries
-
-# Query variations
-ENABLE_QUERY_VARIATIONS = True
-MAX_QUERY_VARIATIONS = 3
-
-
-# ============================================================================
-# SECTION 8: Reranking Settings
+# SECTION 7: Reranking Settings
 # ============================================================================
 
 ENABLE_RERANKING = True
-RERANKING_METHOD: Literal["crossencoder", "llm_simple", "llm_detailed", "llm_pairwise"] = "llm_simple"
+
+# Reranking method: "cross_encoder" (free, local) or "llm" (expensive, cloud)
+RERANKING_METHOD: Literal["cross_encoder", "llm"] = "cross_encoder"
+
 RERANKING_TOP_K = 5
 
-# Cross-encoder model (if using crossencoder method)
-CROSSENCODER_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+# Cross-encoder model (local, free, ~900MB)
+RERANKING_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
+# Batch processing settings
+RERANKING_BATCH_SIZE = 32
+
+# Score normalization method
+RERANKING_SCORE_NORMALIZATION: Literal["minmax", "sigmoid", "none"] = "minmax"
+
+# Smart reranking with LLM fallback
+ENABLE_LLM_RERANKING_FALLBACK = True
+RERANKING_FALLBACK_THRESHOLD = 0.5  # If score < this, fallback to LLM
+
+# LLM reranking settings (if using "llm" method or fallback)
+LLM_RERANKING_TEMPERATURE = 0.1
+LLM_RERANKING_MAX_TOKENS = 200
+
+# Model caching directory (None = use default)
+CROSS_ENCODER_CACHE_DIR = None
+
+# ============================================================================
+# SECTION 8: Query Enhancement Settings
+# ============================================================================
+
+ENABLE_QUERY_ENHANCEMENT = True
+
+# Query Classification
+ENABLE_QUERY_CLASSIFICATION = True
+
+# Query Decomposition (for complex multi-part queries)
+ENABLE_QUERY_DECOMPOSITION = True
+MAX_SUBQUERIES = 3  # Maximum sub-queries from decomposition
+
+# HyDE (Hypothetical Document Embeddings)
+ENABLE_HYDE = True
+HYDE_FOR_SIMPLE_QUERIES = False  # Only use HyDE for complex queries
+HYDE_TEMPERATURE = 0.4  # Higher = more creative hypothetical answers
+HYDE_MAX_TOKENS = 200
+
+# Query Variations (alternative phrasings)
+ENABLE_QUERY_VARIATIONS = True
+MAX_QUERY_VARIATIONS = 3  # Number of variations to generate
+QUERY_VARIATION_METHOD: Literal["llm", "template"] = "llm"  # "llm" or "template"
+
+# Query enhancement LLM settings
+QUERY_ENHANCEMENT_TEMPERATURE = 0.3
+QUERY_ENHANCEMENT_MAX_TOKENS = 300
 
 # ============================================================================
 # SECTION 9: LLM Answer Generation Settings
@@ -191,16 +224,14 @@ LLM_MAX_TOKENS = 400
 LLM_MAX_RETRIES = 3
 LLM_RETRY_DELAY = 2
 
-
 # ============================================================================
 # SECTION 10: Semantic Cache Settings
 # ============================================================================
 
 ENABLE_SEMANTIC_CACHE = True
-CACHE_SIMILARITY_THRESHOLD = 0.95  # Must be very similar to return cached answer
+CACHE_SIMILARITY_THRESHOLD = 0.90  # Must be very similar to return cached answer
 CACHE_TTL_HOURS = 24  # Cache entry expires after 24 hours
 CACHE_MAX_ENTRIES = 1000  # Maximum cache size
-
 
 # ============================================================================
 # SECTION 11: Memory Settings
@@ -220,7 +251,6 @@ ENABLE_ENTITY_MEMORY = True
 ENABLE_SEMANTIC_MEMORY = True
 SEMANTIC_MEMORY_TOP_K = 3
 
-
 # ============================================================================
 # SECTION 12: Validation & Self-Healing Settings
 # ============================================================================
@@ -234,7 +264,6 @@ CONFIDENCE_THRESHOLD_HIGH = 0.8
 CONFIDENCE_THRESHOLD_MEDIUM = 0.6
 CONFIDENCE_THRESHOLD_LOW = 0.4
 
-
 # ============================================================================
 # SECTION 13: Agentic Mode vs Classic Mode
 # ============================================================================
@@ -247,7 +276,6 @@ CREW_VERBOSE = True
 CREW_MEMORY = True  # CrewAI's built-in memory
 CREW_MAX_RPM = 60  # Rate limit
 
-
 # ============================================================================
 # SECTION 14: Logging
 # ============================================================================
@@ -257,7 +285,6 @@ LOG_TO_FILE = True
 LOG_FILE_PATH = BASE_DIR / "logs" / "medical_rag.log"
 LOG_ROTATION = "10 MB"
 LOG_RETENTION = "30 days"
-
 
 # ============================================================================
 # SECTION 15: Helper Functions
@@ -272,6 +299,7 @@ def ensure_directories():
         MEMORY_PATH,
         BASE_DIR / "logs"
     ]
+    
     for directory in directories:
         directory.mkdir(parents=True, exist_ok=True)
 
@@ -308,37 +336,81 @@ def print_config_summary():
     print("AGENTIC MEDICAL RAG - CONFIGURATION SUMMARY")
     print("=" * 80)
     print(f"\n🔐 Azure Settings:")
-    print(f"  ✓ Document Intelligence: {azure_settings.azure_document_intelligence_endpoint}")
-    print(f"  ✓ OpenAI Endpoint: {azure_settings.azure_openai_endpoint}")
-    print(f"  ✓ Chat Deployment: {azure_settings.azure_openai_chat_deployment}")
-    print(f"  ✓ Embedding Deployment: {azure_settings.azure_openai_embedding_deployment}")
-    print(f"  ✓ API Version: {azure_settings.azure_openai_api_version}")
+    print(f"   ✓ Document Intelligence: {azure_settings.azure_document_intelligence_endpoint}")
+    print(f"   ✓ OpenAI Endpoint: {azure_settings.azure_openai_endpoint}")
+    print(f"   ✓ Chat Deployment: {azure_settings.azure_openai_chat_deployment}")
+    print(f"   ✓ Embedding Deployment: {azure_settings.azure_openai_embedding_deployment}")
+    print(f"   ✓ API Version: {azure_settings.azure_openai_api_version}")
     
     print(f"\n📁 Paths:")
-    print(f"  • Input Folder: {INPUT_FOLDER}")
-    print(f"  • Knowledge Base: {INDEX_PATH}")
-    print(f"  • Cache: {CACHE_PATH}")
-    print(f"  • Memory: {MEMORY_PATH}")
+    print(f"   • Input Folder: {INPUT_FOLDER}")
+    print(f"   • Knowledge Base: {INDEX_PATH}")
+    print(f"   • Cache: {CACHE_PATH}")
+    print(f"   • Memory: {MEMORY_PATH}")
     
     print(f"\n⚙️  Feature Flags:")
-    print(f"  • Agentic Mode: {ENABLE_AGENTIC_MODE}")
-    print(f"  • Semantic Cache: {ENABLE_SEMANTIC_CACHE}")
-    print(f"  • Query Enhancement: {ENABLE_QUERY_ENHANCEMENT}")
-    print(f"  • Reranking: {ENABLE_RERANKING} ({RERANKING_METHOD})")
-    print(f"  • Validation: {ENABLE_VALIDATION}")
-    print(f"  • Self-Healing: {ENABLE_SELF_HEALING}")
+    print(f"   • Agentic Mode: {ENABLE_AGENTIC_MODE}")
+    print(f"   • Semantic Cache: {ENABLE_SEMANTIC_CACHE}")
+    print(f"   • Query Enhancement: {ENABLE_QUERY_ENHANCEMENT}")
+    print(f"   • Reranking: {ENABLE_RERANKING} ({RERANKING_METHOD})")
+    print(f"   • Validation: {ENABLE_VALIDATION}")
+    print(f"   • Self-Healing: {ENABLE_SELF_HEALING}")
     
     print(f"\n🔧 Core Settings:")
-    print(f"  • Chunk Size: {CHUNK_SIZE} (overlap: {CHUNK_OVERLAP})")
-    print(f"  • Top-K: {DEFAULT_TOP_K}")
-    print(f"  • LLM Temperature: {LLM_TEMPERATURE}")
-    print(f"  • Cache Threshold: {CACHE_SIMILARITY_THRESHOLD}")
+    print(f"   • Chunk Size: {CHUNK_SIZE} (overlap: {CHUNK_OVERLAP})")
+    print(f"   • Top-K: {DEFAULT_TOP_K}")
+    print(f"   • LLM Temperature: {LLM_TEMPERATURE}")
+    print(f"   • Cache Threshold: {CACHE_SIMILARITY_THRESHOLD}")
     print("=" * 80)
 
 
+
+
 # ============================================================================
-# SECTION 16: Initialization
+# SECTION 16: validation
+# ============================================================================
+# ============================================================================
+# SECTION 11: LLM-as-Judge Configuration (for ValidationTools)
+# ============================================================================
+
+# Enable LLM-based validation
+ENABLE_LLM_JUDGE = True
+
+# LLM provider for validation (azure_openai, gemini, openai)
+VALIDATION_LLM_PROVIDER = os.getenv("VALIDATION_LLM_PROVIDER", "azure_openai")
+
+# For Azure OpenAI: Use deployment name from env
+VALIDATION_LLM_DEPLOYMENT = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT", "gpt-4o-mini")
+
+# Use existing Azure OpenAI credentials
+VALIDATION_LLM_API_KEY = os.getenv("AZURE_OPENAI_KEY")  # ← Your env var
+VALIDATION_LLM_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
+VALIDATION_LLM_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
+
+# Fallback to rule-based if LLM fails
+VALIDATION_FALLBACK_TO_RULES = True
+
+# Validation thresholds
+MIN_ANSWER_LENGTH = 50
+MAX_ANSWER_LENGTH = 2000
+MIN_CITATIONS = 1
+MIN_QUALITY_SCORE = 0.6
+
+# PII Detection (DISABLED - returns unfiltered answers)
+ENABLE_PII_DETECTION = False
+
+# Strict mode
+VALIDATION_STRICT_MODE = False
+
+
+
+
+# ============================================================================
+# SECTION 17: Initialization & Model Names (MUST BE AT END!)
 # ============================================================================
 
 # Auto-create directories on import
 ensure_directories()
+
+# Define model name using azure_settings (which is now available)
+QUERY_ENHANCEMENT_MODEL = azure_settings.azure_openai_chat_deployment  # pra-poc-gpt-4o

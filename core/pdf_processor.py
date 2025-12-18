@@ -2,11 +2,13 @@
 PDF Text Extraction using Azure Document Intelligence
 
 Wraps Azure Document Intelligence API for medical document processing.
+
 Supports:
 - Handwritten text (critical for medical forms)
 - Complex layouts
 - Page-by-page extraction
 - Metadata preservation
+- Automatic retry on network failures
 
 Uses prebuilt-read model optimized for medical documents.
 """
@@ -14,9 +16,8 @@ Uses prebuilt-read model optimized for medical documents.
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 import time
-
-from azure.core.exceptions import HttpResponseError
-
+import logging
+from azure.core.exceptions import HttpResponseError, ServiceRequestError
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.ai.documentintelligence.models import AnalyzeResult
 
@@ -30,26 +31,45 @@ from config.settings import (
     MIN_CHUNK_SIZE
 )
 
+logger = logging.getLogger(__name__)
 
-
-
-
+# Retry configuration
+MAX_RETRIES = 3
+RETRY_DELAY = 5  # seconds
+RETRY_BACKOFF = 2  # exponential backoff multiplier
 
 
 # ============================================================================
-# SECTION 1: PDF Text Extraction
+# SECTION 1: PDF Text Extraction with Retry Logic
 # ============================================================================
 
 def extract_text_from_pdf(
     pdf_path: Path,
     model: str = DOC_INTEL_MODEL,
     pages: Optional[str] = DOC_INTEL_PAGES,
-    locale: str = DOC_INTEL_LOCALE
+    locale: str = DOC_INTEL_LOCALE,
+    max_retries: int = MAX_RETRIES,
+    retry_delay: int = RETRY_DELAY
 ) -> Dict[str, Any]:
     """
-    Extract text from PDF using Azure Document Intelligence (NEW SDK).
+    Extract text from PDF using Azure Document Intelligence with automatic retry.
+    
+    Features:
+    - Automatic retry on network/DNS failures
+    - Exponential backoff
+    - Detailed error logging
+    
+    Args:
+        pdf_path: Path to PDF file
+        model: Document Intelligence model to use
+        pages: Pages to extract (None = all)
+        locale: Document locale
+        max_retries: Maximum retry attempts (default: 3)
+        retry_delay: Initial delay between retries in seconds (default: 5)
+        
+    Returns:
+        dict: Extraction result with success/error status
     """
-    start_time = time.time()
     pdf_path = Path(pdf_path)
     
     if not pdf_path.exists():
@@ -57,6 +77,102 @@ def extract_text_from_pdf(
             'success': False,
             'error': f'File not found: {pdf_path}'
         }
+    
+    last_error = None
+    
+    for attempt in range(1, max_retries + 1):
+        try:
+            if attempt > 1:
+                logger.info(f"🔄 Retry attempt {attempt}/{max_retries} for {pdf_path.name}")
+            
+            # Call internal extraction function
+            result = _extract_text_internal(
+                pdf_path=pdf_path,
+                model=model,
+                pages=pages,
+                locale=locale
+            )
+            
+            # Success!
+            if result['success']:
+                if attempt > 1:
+                    logger.info(f"✅ Extraction succeeded on attempt {attempt}")
+                return result
+            else:
+                # Extraction failed but not due to network - don't retry
+                return result
+                
+        except (ServiceRequestError, ConnectionError, TimeoutError, OSError) as e:
+            # Network/DNS errors - these are retryable
+            error_str = str(e)
+            last_error = error_str
+            
+            # Identify error type
+            if "Failed to resolve" in error_str or "getaddrinfo failed" in error_str:
+                error_type = "🌐 DNS resolution failure"
+            elif "Connection" in error_str:
+                error_type = "🔌 Connection error"
+            elif "Timeout" in error_str:
+                error_type = "⏱️ Timeout"
+            else:
+                error_type = "🔗 Network error"
+            
+            logger.warning(
+                f"{error_type} on attempt {attempt}/{max_retries} for {pdf_path.name}: {error_str}"
+            )
+            
+            if attempt < max_retries:
+                # Calculate exponential backoff delay
+                delay = retry_delay * (RETRY_BACKOFF ** (attempt - 1))
+                logger.info(f"⏳ Waiting {delay} seconds before retry...")
+                time.sleep(delay)
+            else:
+                logger.error(
+                    f"❌ All {max_retries} attempts failed for {pdf_path.name}"
+                )
+                return {
+                    'success': False,
+                    'error': f'Extraction failed after {max_retries} attempts: {last_error}',
+                    'attempts': max_retries
+                }
+        
+        except HttpResponseError as e:
+            # Azure API errors (quota, auth, etc.) - don't retry
+            logger.error(f"❌ Azure API error (non-retryable): {e}")
+            return {
+                'success': False,
+                'error': f'Azure API error: {str(e)}'
+            }
+        
+        except Exception as e:
+            # Unknown errors - don't retry
+            logger.error(f"❌ Unexpected error: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Unexpected error: {str(e)}'
+            }
+    
+    # Should not reach here, but safety fallback
+    return {
+        'success': False,
+        'error': f'Extraction failed after {max_retries} attempts: {last_error}',
+        'attempts': max_retries
+    }
+
+
+def _extract_text_internal(
+    pdf_path: Path,
+    model: str,
+    pages: Optional[str],
+    locale: str
+) -> Dict[str, Any]:
+    """
+    Internal extraction function (called by retry wrapper).
+    
+    This contains the actual Azure Document Intelligence API call.
+    Separated to keep retry logic clean.
+    """
+    start_time = time.time()
     
     try:
         client = get_document_intelligence_client()
@@ -95,10 +211,9 @@ def extract_text_from_pdf(
         
         full_text = "\n\n".join(full_text_parts)
         
+        # Calculate hashes and metadata
         file_hash = calculate_file_hash(pdf_path, algorithm="md5")
-        from core.deduplication import calculate_chunk_signature as calc_content_sig
-        content_signature = calc_content_sig(full_text)
-        
+        content_signature = calculate_chunk_signature(full_text)
         file_info = get_file_info(pdf_path)
         extraction_time = time.time() - start_time
         
@@ -118,58 +233,69 @@ def extract_text_from_pdf(
         }
         
     except Exception as e:
-        return {
-            'success': False,
-            'error': f'Extraction error: {str(e)}'
-        }
+        # Re-raise to let retry wrapper handle it
+        raise
+
 
 # ============================================================================
-# SECTION 2: Batch Extraction
+# SECTION 2: Batch Extraction (with retry support)
 # ============================================================================
 
 def extract_batch(
     pdf_paths: List[Path],
-    show_progress: bool = True
+    show_progress: bool = True,
+    max_retries: int = MAX_RETRIES
 ) -> Dict[str, Any]:
     """
-    Extract text from multiple PDFs with progress tracking.
+    Extract text from multiple PDFs with progress tracking and retry.
     
     Args:
         pdf_paths: List of PDF file paths
         show_progress: Print progress messages (default: True)
+        max_retries: Maximum retry attempts per PDF
         
     Returns:
         dict: Batch extraction results
-            {
-                'results': {filename: extraction_result},
-                'summary': {
-                    'total': int,
-                    'successful': int,
-                    'failed': int,
-                    'total_time_seconds': float
-                }
+        {
+            'results': {filename: extraction_result},
+            'summary': {
+                'total': int,
+                'successful': int,
+                'failed': int,
+                'retried': int,
+                'total_time_seconds': float
             }
+        }
     """
     start_time = time.time()
     results = {}
     successful = 0
     failed = 0
+    retried = 0
     
     for i, pdf_path in enumerate(pdf_paths, 1):
         if show_progress:
             print(f"Processing {i}/{len(pdf_paths)}: {pdf_path.name}...", end=" ")
         
-        result = extract_text_from_pdf(pdf_path)
+        result = extract_text_from_pdf(pdf_path, max_retries=max_retries)
         results[pdf_path.name] = result
         
         if result['success']:
             successful += 1
             if show_progress:
                 print(f"✅ ({result['total_pages']} pages)")
+            
+            # Track if it was retried
+            if result.get('attempts', 1) > 1:
+                retried += 1
         else:
             failed += 1
             if show_progress:
-                print(f"❌ {result.get('error', 'Unknown error')}")
+                error_msg = result.get('error', 'Unknown error')
+                # Truncate long error messages
+                if len(error_msg) > 60:
+                    error_msg = error_msg[:60] + "..."
+                print(f"❌ {error_msg}")
     
     total_time = time.time() - start_time
     
@@ -179,6 +305,7 @@ def extract_batch(
             'total': len(pdf_paths),
             'successful': successful,
             'failed': failed,
+            'retried': retried,
             'total_time_seconds': round(total_time, 2)
         }
     }
@@ -209,15 +336,13 @@ def chunk_text(
         
     Returns:
         List[dict]: List of chunk dictionaries
-            [
-                {
-                    'text': str,
-                    'chunk_index': int,
-                    'start_char': int,
-                    'end_char': int,
-                    'metadata': dict
-                }
-            ]
+        {
+            'text': str,
+            'chunk_index': int,
+            'start_char': int,
+            'end_char': int,
+            'metadata': dict
+        }
     """
     if not text or not text.strip():
         return []
@@ -312,31 +437,34 @@ def process_pdf(
     pdf_path: Path,
     chunk_size: int = 1024,
     chunk_overlap: int = 200,
-    extract_chunks: bool = True
+    extract_chunks: bool = True,
+    max_retries: int = MAX_RETRIES
 ) -> Dict[str, Any]:
     """
     Complete pipeline: Extract text + chunk + calculate signatures.
     
     This is the main function to use for processing PDFs.
+    Now includes automatic retry on network failures.
     
     Args:
         pdf_path: Path to PDF file
         chunk_size: Chunk size for text splitting
         chunk_overlap: Overlap between chunks
         extract_chunks: Whether to chunk text (default: True)
+        max_retries: Maximum retry attempts (default: 3)
         
     Returns:
         dict: Complete processing results
-            {
-                'success': bool,
-                'extraction': {extraction_result},
-                'chunks': [list of chunks] (if extract_chunks=True),
-                'total_chunks': int,
-                'error': str (if failed)
-            }
+        {
+            'success': bool,
+            'extraction': {extraction_result},
+            'chunks': [list of chunks] (if extract_chunks=True),
+            'total_chunks': int,
+            'error': str (if failed)
+        }
     """
-    # Step 1: Extract text
-    extraction_result = extract_text_from_pdf(pdf_path)
+    # Step 1: Extract text (with retry)
+    extraction_result = extract_text_from_pdf(pdf_path, max_retries=max_retries)
     
     if not extraction_result['success']:
         return {
@@ -387,11 +515,11 @@ def validate_extraction(extraction_result: Dict[str, Any]) -> Dict[str, Any]:
         
     Returns:
         dict: Validation results
-            {
-                'valid': bool,
-                'warnings': [list of warnings],
-                'stats': {statistics}
-            }
+        {
+            'valid': bool,
+            'warnings': [list of warnings],
+            'stats': {statistics}
+        }
     """
     warnings = []
     
@@ -454,7 +582,7 @@ def print_extraction_summary(result: Dict[str, Any]):
     print(f"\n📄 File: {metadata['filename']}")
     print(f"📊 Size: {metadata['size_mb']} MB")
     print(f"📖 Pages: {extraction['total_pages']}")
-    print(f"⏱️  Extraction Time: {metadata['extraction_time_seconds']}s")
+    print(f"⏱️ Extraction Time: {metadata['extraction_time_seconds']}s")
     print(f"🔧 Model: {metadata['model_used']}")
     
     if 'chunks' in result:
@@ -466,7 +594,7 @@ def print_extraction_summary(result: Dict[str, Any]):
     # Validation
     validation = validate_extraction(extraction)
     if validation['warnings']:
-        print(f"\n⚠️  Warnings:")
+        print(f"\n⚠️ Warnings:")
         for warning in validation['warnings']:
             print(f"   • {warning}")
     
