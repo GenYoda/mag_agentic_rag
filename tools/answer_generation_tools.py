@@ -17,6 +17,8 @@ Integrates:
 
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from crewai.tools import tool
+
 import logging
 
 from tools.retrieval_tools import RetrievalTools
@@ -299,3 +301,66 @@ def ask_question(
         top_k=top_k,
         conversation_history=conversation_history
     )
+# ============================================================================
+# CrewAI Tool Wrappers
+# ============================================================================
+
+@tool("Generate Answer (RAG Pipeline)")
+def generate_answer_tool(
+    query: str,
+    top_k: int = 5,
+    temperature: float = 0.3,
+    conversation_history: list = None
+) -> dict:
+    """
+    Complete RAG pipeline: retrieve context + generate answer.
+    
+    This handles both retrieval and answer generation.
+    
+    Args:
+        query: User question
+        top_k: Number of chunks to retrieve
+        temperature: LLM temperature (0.0-1.0)
+        conversation_history: Previous Q&A exchanges
+        
+    Returns:
+        dict: {success, query, answer, sources, metadata}
+    """
+    answer_gen = AnswerGenerationTools()
+    return answer_gen.generate_answer(
+        query=query,
+        top_k=top_k,
+        temperature=temperature,
+        conversation_history=conversation_history
+    )
+
+
+@tool("Generate Answer from Custom Context")
+def generate_answer_with_context_tool(
+    query: str,
+    context_chunks: list,
+    temperature: float = 0.3,
+    conversation_history: list = None
+) -> dict:
+    """
+    Generate answer from pre-retrieved context (skip retrieval).
+    
+    Use when you already have specific chunks (e.g., after reranking).
+    
+    Args:
+        query: User question
+        context_chunks: Pre-retrieved chunks to use
+        temperature: LLM temperature
+        conversation_history: Previous Q&A
+        
+    Returns:
+        dict: {success, query, answer, metadata}
+    """
+    answer_gen = AnswerGenerationTools()
+    return answer_gen.generate_answer_with_custom_context(
+        query=query,
+        context_chunks=context_chunks,
+        temperature=temperature,
+        conversation_history=conversation_history
+    )
+

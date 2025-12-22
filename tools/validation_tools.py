@@ -18,6 +18,8 @@ import re
 import json
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
+from crewai.tools import tool
+
 from datetime import datetime
 import os
 
@@ -404,7 +406,22 @@ class ValidationTools:
         logger.info("Running LLM-as-Judge validation...")
         
         # Prepare context
-        context_text = "\n\n".join(context_chunks) if context_chunks else "No context provided"
+        # context_text = "\n\n".join(context_chunks) if context_chunks else "No context provided"
+        # Prepare context - handle both list of strings and list of dicts
+        if context_chunks:
+            # Extract text from chunks (handle both str and dict formats)
+            chunk_texts = []
+            for chunk in context_chunks:
+                if isinstance(chunk, dict):
+                    # If chunk is a dict, extract 'text' field
+                    chunk_texts.append(chunk.get('text', str(chunk)))
+                else:
+                    # If chunk is already a string
+                    chunk_texts.append(str(chunk))
+            context_text = "\n\n".join(chunk_texts)
+        else:
+            context_text = "No context provided"
+
         
         # Prompt
         prompt = f"""You are an expert answer validator for a RAG (Retrieval-Augmented Generation) system.
@@ -577,7 +594,16 @@ Respond in JSON format:
         
         # Check if key terms in answer appear in context
         answer_words = set(answer.lower().split())
-        context_text = ' '.join(context_chunks).lower()
+        # context_text = ' '.join(context_chunks).lower()
+        # Extract text from chunks
+        chunk_texts = []
+        for chunk in context_chunks:
+            if isinstance(chunk, dict):
+                chunk_texts.append(chunk.get('text', str(chunk)))
+            else:
+                chunk_texts.append(str(chunk))
+        context_text = ' '.join(chunk_texts).lower()
+
         context_words = set(context_text.split())
         
         # Calculate overlap
@@ -716,3 +742,66 @@ def validate_answer(answer: str, query: str, **kwargs) -> ValidationResult:
     """
     validator = ValidationTools(**kwargs)
     return validator.validate_answer(answer, query)
+
+# ============================================================================
+# CrewAI Tool Wrappers
+# ============================================================================
+
+@tool("Validate Answer")
+def validate_answer_tool(
+    answer: str,
+    query: str,
+    context_chunks: list = None,
+    metadata: dict = None
+) -> dict:
+    """
+    Validate generated answer for quality, hallucinations, and citations.
+    
+    Uses LLM-as-Judge for comprehensive validation.
+    
+    Args:
+        answer: Generated answer to validate
+        query: Original user query
+        context_chunks: Retrieved context chunks used
+        metadata: Additional metadata
+        
+    Returns:
+        dict: ValidationResult as dict with is_valid, quality_score, 
+              confidence_score, issues, citations, hallucination status
+    """
+    validator = ValidationTools(
+        enable_llm_judge=True,
+        min_quality_score=0.6,
+        min_citations=1
+    )
+    result = validator.validate_answer(
+        answer=answer,
+        query=query,
+        context_chunks=context_chunks,
+        metadata=metadata
+    )
+    return result.to_dict()
+
+
+@tool("Get Validation Summary")
+def get_validation_summary_tool(validation_result: dict) -> str:
+    """
+    Get human-readable validation summary.
+    
+    Args:
+        validation_result: ValidationResult dict from validate_answer_tool
+        
+    Returns:
+        str: Formatted validation summary
+    """
+    validator = ValidationTools()
+    # Reconstruct ValidationResult from dict
+    result = ValidationResult(
+        is_valid=validation_result['is_valid'],
+        quality_score=validation_result['quality_score'],
+        confidence_score=validation_result['confidence_score'],
+        has_hallucination=validation_result['has_hallucination'],
+        citation_count=validation_result['citation_count']
+    )
+    return validator.get_validation_summary(result)
+

@@ -20,6 +20,8 @@ Integrates:
 
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Literal
+from crewai.tools import tool
+
 import logging
 import re
 
@@ -439,3 +441,92 @@ def enhance_query(query: str) -> Dict[str, Any]:
     """
     tools = QueryTools()
     return tools.enhance_query(query)
+
+# ============================================================================
+# CrewAI Tool Wrappers
+# ============================================================================
+
+@tool("Classify Query")
+def classify_query_tool(query: str) -> dict:
+    """
+    Classify query type and complexity to determine enhancement strategy.
+    
+    Returns classification with recommendations for decomposition, HyDE, and variations.
+    
+    Args:
+        query: User question to classify
+        
+    Returns:
+        dict: {type, complexity, requires_decomposition, requires_hyde, 
+               requires_variations, is_list_query}
+    """
+    tools = QueryTools()
+    return tools.classify_query(query)
+
+
+@tool("Decompose Complex Query")
+def decompose_query_tool(query: str) -> list:
+    """
+    Break complex multi-part query into atomic sub-queries.
+    
+    Useful for queries with multiple questions or comparisons.
+    
+    Args:
+        query: Complex query to decompose
+        
+    Returns:
+        list: List of simpler sub-questions
+    """
+    tools = QueryTools()
+    return tools.decompose_query(query)
+
+
+@tool("Generate Hypothetical Answer (HyDE)")
+def generate_hypothetical_answer_tool(query: str) -> str:
+    """
+    Generate hypothetical answer for better retrieval using HyDE technique.
+    
+    Creates document-like text that helps find similar real documents.
+    
+    Args:
+        query: User question
+        
+    Returns:
+        str: Hypothetical answer text
+    """
+    tools = QueryTools()
+    return tools.generate_hypothetical_answer(query)
+
+
+@tool("Generate Query Variations")
+def generate_query_variations_tool(query: str, max_variations: int = 3) -> list:
+    """
+    Generate alternative phrasings of the query for broader retrieval coverage.
+    
+    Args:
+        query: Original query
+        max_variations: Number of variations to generate
+        
+    Returns:
+        list: Query variations (includes original)
+    """
+    tools = QueryTools()
+    return tools.generate_query_variations(query, max_variations)
+
+
+@tool("Enhance Query (Full Pipeline)")
+def enhance_query_tool(query: str) -> dict:
+    """
+    Complete query enhancement pipeline: classify, decompose, HyDE, variations.
+    
+    This is the main entry point for query enhancement.
+    
+    Args:
+        query: User question
+        
+    Returns:
+        dict: Enhanced query components with all enhancements applied
+    """
+    tools = QueryTools()
+    return tools.enhance_query(query)
+

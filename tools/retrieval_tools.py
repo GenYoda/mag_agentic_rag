@@ -16,6 +16,8 @@ Integrates:
 
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
+from crewai.tools import tool
+
 import logging
 import numpy as np
 import faiss
@@ -347,3 +349,65 @@ def search_knowledge_base(
     """
     retrieval = RetrievalTools()
     return retrieval.search(query=query, top_k=top_k)
+
+# ============================================================================
+# CrewAI Tool Wrappers
+# ============================================================================
+
+@tool("Search Knowledge Base")
+def search_tool(query: str, top_k: int = 5, max_distance: float = 1.5) -> dict:
+    """
+    Semantic search over FAISS knowledge base.
+    
+    Retrieves most relevant document chunks for the query.
+    
+    Args:
+        query: Search query text
+        top_k: Number of results to return
+        max_distance: Maximum L2 distance threshold for filtering
+        
+    Returns:
+        dict: {success, query, results (list of chunks), total_results}
+    """
+    retrieval = RetrievalTools()
+    return retrieval.search(query=query, top_k=top_k, max_distance=max_distance)
+
+
+@tool("Multi-Query Search")
+def search_multiple_queries_tool(
+    queries: list, 
+    top_k: int = 5, 
+    fusion_method: str = "reciprocal_rank"
+) -> dict:
+    """
+    Search multiple query variations and fuse results.
+    
+    Useful after query enhancement/HyDE to get best results.
+    
+    Args:
+        queries: List of query variations
+        top_k: Number of final results after fusion
+        fusion_method: "reciprocal_rank" or "max_score"
+        
+    Returns:
+        dict: {success, queries, results (fused), fusion_method}
+    """
+    retrieval = RetrievalTools()
+    return retrieval.search_multiple_queries(
+        queries=queries,
+        top_k=top_k,
+        fusion_method=fusion_method
+    )
+
+
+@tool("Get Retrieval Stats")
+def get_retrieval_stats_tool() -> dict:
+    """
+    Get knowledge base statistics.
+    
+    Returns:
+        dict: {index_size, embedding_dimension, default_top_k, thresholds}
+    """
+    retrieval = RetrievalTools()
+    return retrieval.get_retrieval_stats()
+

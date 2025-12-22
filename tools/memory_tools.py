@@ -16,6 +16,8 @@ import logging
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Any
 from dataclasses import dataclass, field, asdict
+from crewai.tools import tool
+
 import json
 from pathlib import Path
 import re
@@ -531,6 +533,216 @@ class MemoryTools:
         is_short = len(query.split()) < 10
         
         return (has_pronoun or has_follow_up_phrase) and is_short
+    
+    def resolve_coreference(self, query: str,recent_exchanges: List[Dict[str, str]]) -> str:
+        """
+        Resolve pronouns and references in query using recent context.
+        
+        Args:
+            query: Query with potential references ("it", "that medication")
+            recent_exchanges: Recent Q&A exchanges for context
+            
+        Returns:
+            str: Resolved query with references replaced
+        """
+        # If no recent exchanges, return as-is
+        if not recent_exchanges:
+            return query
+        
+        # Get last exchange for context
+        last_exchange = recent_exchanges[-1] if recent_exchanges else {}
+        last_answer = last_exchange.get('answer', '')
+        
+        # Check if query has pronouns/references
+        pronouns = ['it', 'that', 'this', 'they', 'them', 'he', 'she', 'those']
+        query_lower = query.lower()
+        
+        has_reference = any(f' {pronoun} ' in f' {query_lower} ' for pronoun in pronouns)
+        
+        if not has_reference:
+            return query  # No references to resolve
+        
+        # Extract entities from last answer
+        entities = self._extract_entities('', last_answer)
+        
+        if entities:
+            # Get entity names
+            entity_names = [e.name for e in entities[:3]]  # Top 3 entities
+            resolved_query = f"{query} (referring to: {', '.join(entity_names)})"
+            logger.info(f"Resolved coreference: {query} → {resolved_query}")
+            return resolved_query
+        
+        # If no entities found, append last answer snippet for context
+        snippet = last_answer[:100].strip()
+        if snippet:
+            resolved_query = f"{query} (context: {snippet}...)"
+            return resolved_query
+        
+        return query  # Return original if nothing to resolve
+    
+    # ========================================================================
+    # Public API Methods (Used by CrewAI Tool Wrappers)
+    # ========================================================================
+    
+    def get_context_for_query(self, query: str, max_history: int = 3) -> dict:
+        """
+        Get conversation context and resolve references for a query.
+        
+        This is the public API method called by the tool wrapper.
+        
+        Args:
+            query: Current user query
+            max_history: Maximum recent exchanges to include
+            
+        Returns:
+            dict: {
+                'recent_exchanges': List of recent Q&A pairs,
+                'resolved_query': Query with references resolved,
+                'relevant_entities': Entities relevant to query,
+                'original_query': Original unmodified query
+            }
+        """
+        # Get recent conversation history
+        recent_turns = self.conversation_history[-max_history:] if self.conversation_history else []
+        
+        # Format as exchanges
+        recent_exchanges = [
+            {
+                'question': turn.user_query,
+                'answer': turn.assistant_response,
+                'turn_id': turn.turn_id,
+                'entities': turn.entities_mentioned
+            }
+            for turn in recent_turns
+        ]
+        
+        # Resolve any references in the query
+        resolved_query = self.resolve_coreference(query, recent_exchanges)
+        
+        # Get relevant entities
+        relevant_entities = []
+        if self.enable_entity_tracking:
+            # Find entities mentioned in recent turns
+            recent_entity_ids = set()
+            for turn in recent_turns:
+                recent_entity_ids.update(turn.entities_mentioned)
+            
+            relevant_entities = [
+                {
+                    'id': entity.entity_id,
+                    'type': entity.entity_type,
+                    'name': entity.name,
+                    'attributes': entity.attributes
+                }
+                for eid, entity in self.entities.items()
+                if eid in recent_entity_ids
+            ]
+        
+        return {
+            'recent_exchanges': recent_exchanges,
+            'resolved_query': resolved_query,
+            'relevant_entities': relevant_entities,
+            'original_query': query
+        }
+    
+    
+    def add_exchange(self, query: str, answer: str, metadata: dict = None) -> dict:
+        """
+        Add a Q&A exchange to memory.
+        
+        This is the public API method called by the tool wrapper.
+        
+        Args:
+            query: User question
+            answer: Assistant's answer
+            metadata: Optional metadata about the exchange
+            
+        Returns:
+            dict: {
+                'success': bool,
+                'message': str,
+                'turn_id': int,
+                'entities_extracted': int
+            }
+        """
+        try:
+            turn = self.add_turn(query, answer, metadata)
+            
+            return {
+                'success': True,
+                'message': f'Exchange added successfully (Turn {turn.turn_id})',
+                'turn_id': turn.turn_id,
+                'entities_extracted': len(turn.entities_mentioned)
+            }
+        except Exception as e:
+            logger.error(f"Error adding exchange: {e}")
+            return {
+                'success': False,
+                'message': f'Failed to add exchange: {str(e)}',
+                'turn_id': None,
+                'entities_extracted': 0
+            }
+    
+    
+    def extract_entities(self, text: str) -> dict:
+        """
+        Extract entities from text.
+        
+        This is the public API method called by the tool wrapper.
+        
+        Args:
+            text: Text to extract entities from
+            
+        Returns:
+            dict: {
+                'entities': {
+                    'medications': [...],
+                    'diagnoses': [...],
+                    'dates': [...],
+                    'people': [...],
+                    'organizations': [...]
+                }
+            }
+        """
+        # Extract entities using private method
+        entities = self._extract_entities(text, '')
+        
+        # Group entities by type
+        grouped = {
+            'medications': [],
+            'diagnoses': [],
+            'dates': [],
+            'people': [],
+            'organizations': [],
+            'locations': [],
+            'other': []
+        }
+        
+        for entity in entities:
+            entity_dict = {
+                'name': entity.name,
+                'type': entity.entity_type,
+                'attributes': entity.attributes
+            }
+            
+            # Map entity type to category
+            if entity.entity_type in ['medication', 'drug']:
+                grouped['medications'].append(entity_dict)
+            elif entity.entity_type in ['diagnosis', 'condition', 'disease']:
+                grouped['diagnoses'].append(entity_dict)
+            elif entity.entity_type in ['date', 'time', 'datetime']:
+                grouped['dates'].append(entity_dict)
+            elif entity.entity_type in ['person', 'patient', 'doctor']:
+                grouped['people'].append(entity_dict)
+            elif entity.entity_type in ['organization', 'hospital', 'clinic']:
+                grouped['organizations'].append(entity_dict)
+            elif entity.entity_type == 'location':
+                grouped['locations'].append(entity_dict)
+            else:
+                grouped['other'].append(entity_dict)
+        
+        return {'entities': grouped}
+
 
 
 # ============================================================================
@@ -549,3 +761,125 @@ def create_memory_tools(session_id: str = "default", **kwargs) -> MemoryTools:
         MemoryTools instance
     """
     return MemoryTools(session_id=session_id, **kwargs)
+
+# ============================================================================
+# Global Instance Management (Singleton Pattern)
+# ============================================================================
+
+_global_memory_instances: Dict[str, MemoryTools] = {}
+
+def get_memory_instance(session_id: str = "default") -> MemoryTools:
+    """
+    Get or create a MemoryTools instance for the given session.
+    
+    This ensures the same memory instance is reused across multiple tool calls
+    within a session, maintaining conversation history.
+    
+    Args:
+        session_id: Session identifier
+        
+    Returns:
+        MemoryTools instance for this session
+    """
+    if session_id not in _global_memory_instances:
+        _global_memory_instances[session_id] = MemoryTools(
+            session_id=session_id,
+            enable_persistence=True,
+            enable_entity_tracking=True
+        )
+        logger.info(f"Created new memory instance for session: {session_id}")
+    
+    return _global_memory_instances[session_id]
+
+
+def clear_memory_instance(session_id: str = "default"):
+    """Clear memory for a specific session"""
+    if session_id in _global_memory_instances:
+        _global_memory_instances[session_id].clear_memory()
+        del _global_memory_instances[session_id]
+        logger.info(f"Cleared memory instance for session: {session_id}")
+
+
+def clear_all_memory_instances():
+    """Clear all memory instances"""
+    for session_id in list(_global_memory_instances.keys()):
+        clear_memory_instance(session_id)
+    logger.info("Cleared all memory instances")
+
+# ============================================================================
+# CrewAI Tool Wrappers (Using Singleton Pattern)
+# ============================================================================
+
+@tool("Get Conversation Context")
+def get_context_for_query_tool(query: str, max_history: int = 3, session_id: str = "default") -> dict:
+    """
+    Get conversation context and resolve references (pronouns, "it", "that").
+    
+    Returns recent exchanges, resolved query, and relevant entities.
+    
+    Args:
+        query: Current user query
+        max_history: Maximum recent exchanges to include
+        session_id: Session identifier (default: "default")
+        
+    Returns:
+        dict: {recent_exchanges, resolved_query, relevant_entities, 
+               original_query}
+    """
+    memory = get_memory_instance(session_id)
+    return memory.get_context_for_query(query, max_history)
+
+
+@tool("Add Exchange to Memory")
+def add_exchange_tool(query: str, answer: str, metadata: dict = None, session_id: str = "default") -> dict:
+    """
+    Store Q&A exchange in multi-layer memory.
+    
+    Updates short-term, long-term, entity, and semantic memory.
+    
+    Args:
+        query: User question
+        answer: Generated answer
+        metadata: Additional metadata
+        session_id: Session identifier (default: "default")
+        
+    Returns:
+        dict: {success, message}
+    """
+    memory = get_memory_instance(session_id)
+    return memory.add_exchange(query, answer, metadata)
+
+
+@tool("Extract Entities")
+def extract_entities_tool(text: str, session_id: str = "default") -> dict:
+    """
+    Extract medical entities from text (medications, diagnoses, dates, etc.).
+    
+    Args:
+        text: Text to extract entities from
+        session_id: Session identifier (default: "default")
+        
+    Returns:
+        dict: {entities: {medications: [], diagnoses: [], dates: [], ...}}
+    """
+    memory = get_memory_instance(session_id)
+    return memory.extract_entities(text)
+
+
+@tool("Resolve Coreference")
+def resolve_coreference_tool(query: str, recent_exchanges: list, session_id: str = "default") -> str:
+    """
+    Resolve pronouns and references in query using entity memory.
+    
+    Args:
+        query: Query with potential references ("it", "that medication")
+        recent_exchanges: Recent Q&A exchanges for context
+        session_id: Session identifier (default: "default")
+        
+    Returns:
+        str: Resolved query with references replaced
+    """
+    memory = get_memory_instance(session_id)
+    return memory.resolve_coreference(query, recent_exchanges)
+
+
