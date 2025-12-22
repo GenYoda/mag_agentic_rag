@@ -20,6 +20,8 @@ Integrates:
 
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from crewai.tools import tool
+
 import logging
 import numpy as np
 
@@ -157,8 +159,15 @@ class RerankingTools:
                 return self._fallback_to_llm(query, chunks, top_k, reason="no_results")
             
             # Check quality of top result
-            top_score = reranked[0].get('rerank_score', 0)
-            
+            # top_score = reranked[0].get('rerank_score', 0)
+            # ✅ FIX: Handle both dict and string results
+            if isinstance(reranked[0], dict):
+                top_score = reranked[0].get('rerank_score', 0)
+            else:
+                # Fallback if reranked is list of strings
+                top_score = 0
+                logger.warning(f"Reranked result is not dict: {type(reranked[0])}")
+
             if top_score < fallback_threshold:
                 logger.warning(
                     f"Cross-encoder top score ({top_score:.4f}) below threshold "
@@ -269,6 +278,34 @@ class RerankingTools:
         """
         if not chunks:
             return []
+        # ✅ ADD THIS BLOCK HERE (after empty check, before method assignment)
+        # ========================================================================
+        # Normalize chunks: handle both string and dict formats
+        # ========================================================================
+        normalized_chunks = []
+        for chunk in chunks:
+            if isinstance(chunk, str):
+                # Convert string to dict
+                normalized_chunks.append({
+                    'text': chunk,
+                    'metadata': {},
+                    'chunk_id': len(normalized_chunks)
+                })
+            elif isinstance(chunk, dict):
+                # Ensure 'text' key exists
+                if 'text' not in chunk:
+                    logger.warning(f"Chunk missing 'text' key: {chunk}")
+                    chunk['text'] = str(chunk)
+                normalized_chunks.append(chunk)
+            else:
+                logger.warning(f"Unknown chunk type: {type(chunk)}")
+                normalized_chunks.append({
+                    'text': str(chunk),
+                    'metadata': {}
+                })
+        
+        chunks = normalized_chunks  # Replace with normalized version
+        # ========================================================================
         
         method = method or self.method
         
@@ -320,6 +357,21 @@ class RerankingTools:
         self._load_cross_encoder()
         
         # Prepare query-text pairs
+        # ✅ FIX: Normalize chunks to dict format
+        normalized_chunks = []
+        for chunk in chunks:
+            if isinstance(chunk, str):
+                # Chunk is a string, wrap it
+                normalized_chunks.append({'text': chunk, 'metadata': {}})
+            elif isinstance(chunk, dict):
+                # Chunk is already a dict, use as-is
+                normalized_chunks.append(chunk)
+            else:
+                # Unknown type, convert to string
+                normalized_chunks.append({'text': str(chunk), 'metadata': {}})
+
+        chunks = normalized_chunks  # Replace original chunks
+
         pairs = [[query, chunk['text']] for chunk in chunks]
         
         # Get scores (batch processing)
@@ -363,6 +415,19 @@ class RerankingTools:
         from utils.azure_clients import get_chat_completion
         
         logger.info("Using LLM reranking (this will incur API costs)")
+
+        # ✅ FIX: Normalize chunks to dict format
+        normalized_chunks = []
+        for chunk in chunks:
+            if isinstance(chunk, str):
+                normalized_chunks.append({'text': chunk, 'metadata': {}})
+            elif isinstance(chunk, dict):
+                normalized_chunks.append(chunk)
+            else:
+                normalized_chunks.append({'text': str(chunk), 'metadata': {}})
+
+        chunks = normalized_chunks  # Replace original
+
         
         # Build reranking prompt
         chunks_text = "\n\n".join([
@@ -558,3 +623,97 @@ def rerank_results(
     """
     reranker = RerankingTools()
     return reranker.rerank(query=query, chunks=chunks, top_k=top_k)
+
+# ============================================================================
+# CrewAI Tool Wrappers
+# ============================================================================
+
+# ============================================================================
+# CrewAI Tool Wrappers
+# ============================================================================
+
+@tool("Rerank with Cross-Encoder")
+def rerank_crossencoder_tool(query: str, chunks: list, top_k: int = 5) -> dict:
+    """
+    Rerank chunks using cross-encoder model (fast, local).
+    
+    Args:
+        query: User query
+        chunks: Retrieved chunks to rerank
+        top_k: Number of top results to return
+        
+    Returns:
+        dict: {success, reranked_chunks, method}
+    """
+    reranker = RerankingTools()
+    try:
+        reranked = reranker.rerank(query=query, chunks=chunks, top_k=top_k, method="cross_encoder")
+        return {
+            "success": True,
+            "reranked_chunks": reranked,
+            "method": "cross_encoder",
+            "top_score": reranked[0].get('rerank_score', 0) if reranked else 0
+        }
+    except Exception as e:
+        logger.error(f"Cross-encoder reranking failed: {e}")
+        return {
+            "success": False,
+            "reranked_chunks": chunks[:top_k],
+            "method": "none",
+            "error": str(e)
+        }
+
+
+@tool("Rerank with LLM")
+def rerank_llm_tool(query: str, chunks: list, top_k: int = 5) -> dict:
+    """
+    Rerank chunks using LLM-based scoring (higher quality, slower).
+    
+    Args:
+        query: User query
+        chunks: Retrieved chunks to rerank
+        top_k: Number of top results to return
+        
+    Returns:
+        dict: {success, reranked_chunks, method}
+    """
+    reranker = RerankingTools()
+    try:
+        reranked = reranker.rerank(query=query, chunks=chunks, top_k=top_k, method="llm")
+        return {
+            "success": True,
+            "reranked_chunks": reranked,
+            "method": "llm",
+            "top_score": reranked[0].get('rerank_score', 0) if reranked else 0
+        }
+    except Exception as e:
+        logger.error(f"LLM reranking failed: {e}")
+        return {
+            "success": False,
+            "reranked_chunks": chunks[:top_k],
+            "method": "none",
+            "error": str(e)
+        }
+
+
+@tool("Smart Rerank with Fallback")
+def rerank_smart_fallback_tool(query: str, chunks: list, top_k: int = 5, fallback_threshold: float = 0.5) -> dict:
+    """
+    Smart reranking with automatic LLM fallback.
+    
+    Tries cross-encoder first, falls back to LLM if scores are low.
+    
+    Args:
+        query: User query
+        chunks: Retrieved chunks to rerank
+        top_k: Number of top results to return
+        fallback_threshold: If top score < this, trigger LLM fallback
+        
+    Returns:
+        dict: {success, reranked_chunks, method_used, fallback_triggered}
+    """
+    reranker = RerankingTools()
+    return reranker.rerank_with_fallback(query, chunks, top_k, fallback_threshold)
+
+
+

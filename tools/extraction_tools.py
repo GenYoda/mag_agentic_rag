@@ -15,6 +15,8 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import logging
 
+from crewai.tools import tool
+
 # Import from Phase 2 core modules
 from core.pdf_processor import (
     extract_text_from_pdf,
@@ -275,7 +277,295 @@ class ExtractionTools:
                 'signature_calculation'
             ]
         }
+# ============================================================================
+# ✅ ADD CREWAI TOOL WRAPPERS HERE
+# ============================================================================
 
+# Singleton instance for tools
+_extractor_instance = None
+
+def _get_extractor_instance() -> ExtractionTools:
+    """Get or create ExtractionTools singleton instance."""
+    global _extractor_instance
+    if _extractor_instance is None:
+        _extractor_instance = ExtractionTools()
+    return _extractor_instance
+
+
+@tool("Extract PDF")
+def extract_pdf_tool(pdf_path: str) -> dict:
+    """
+    Extract raw text from a PDF file.
+    
+    Args:
+        pdf_path: Path to PDF file
+        
+    Returns:
+        dict: {
+            success: bool,
+            full_text: str,
+            page_texts: dict,
+            total_pages: int,
+            word_count: int,
+            file_hash: str,
+            content_signature: str,
+            error: str | None
+        }
+    """
+    extractor = _get_extractor_instance()
+    
+    try:
+        result = extractor.extract_pdf(pdf_path)
+        return result
+        
+    except Exception as e:
+        logger.error(f"Extract PDF tool error: {e}", exc_info=True)
+        return {
+            'success': False,
+            'pdf_path': pdf_path,
+            'error': str(e)
+        }
+
+
+@tool("Process PDF with Chunking")
+def process_pdf_with_chunking_tool(
+    pdf_path: str,
+    chunk_size: int = 500,
+    chunk_overlap: int = 100
+) -> dict:
+    """
+    Extract text from PDF and chunk into semantic units.
+    This is the recommended method for KB ingestion.
+    
+    Args:
+        pdf_path: Path to PDF file
+        chunk_size: Characters per chunk (default: 500)
+        chunk_overlap: Overlap between chunks (default: 100)
+        
+    Returns:
+        dict: {
+            success: bool,
+            chunks: list,  # List of chunk dicts with text, metadata, signatures
+            chunk_count: int,
+            file_hash: str,
+            content_signature: str,
+            total_pages: int,
+            error: str | None
+        }
+    """
+    extractor = _get_extractor_instance()
+    
+    try:
+        result = extractor.process_pdf_with_chunking(
+            pdf_path=pdf_path,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+            extract_chunks=True
+        )
+        return result
+        
+    except Exception as e:
+        logger.error(f"Process PDF with chunking tool error: {e}", exc_info=True)
+        return {
+            'success': False,
+            'pdf_path': pdf_path,
+            'error': str(e)
+        }
+
+
+@tool("Batch Extract PDFs")
+def batch_extract_pdfs_tool(pdf_paths: list, show_progress: bool = True) -> dict:
+    """
+    Extract text from multiple PDF files.
+    
+    Args:
+        pdf_paths: List of PDF file paths
+        show_progress: Show progress messages (default: True)
+        
+    Returns:
+        dict: {
+            success: bool,
+            total_pdfs: int,
+            successful: int,
+            failed: int,
+            results: list,
+            errors: dict
+        }
+    """
+    extractor = _get_extractor_instance()
+    
+    try:
+        result = extractor.batch_extract_pdfs(
+            pdf_paths=pdf_paths,
+            show_progress=show_progress
+        )
+        return result
+        
+    except Exception as e:
+        logger.error(f"Batch extract PDFs tool error: {e}", exc_info=True)
+        return {
+            'success': False,
+            'total_pdfs': len(pdf_paths),
+            'successful': 0,
+            'failed': len(pdf_paths),
+            'error': str(e)
+        }
+
+
+@tool("Extract Metadata")
+def extract_metadata_tool(pdf_path: str) -> dict:
+    """
+    Extract comprehensive metadata from a PDF file.
+    
+    Args:
+        pdf_path: Path to PDF file
+        
+    Returns:
+        dict: {
+            success: bool,
+            filename: str,
+            file_size: int,
+            total_pages: int,
+            file_hash: str,
+            content_signature: str,
+            modified_date: str,
+            metadata: dict,  # PDF metadata (author, title, etc.)
+            error: str | None
+        }
+    """
+    extractor = _get_extractor_instance()
+    
+    try:
+        # Extract PDF to get metadata
+        result = extractor.extract_pdf(pdf_path)
+        
+        if not result['success']:
+            return result
+        
+        # Add file system metadata
+        pdf_path_obj = Path(pdf_path)
+        file_stat = pdf_path_obj.stat()
+        
+        metadata_result = {
+            'success': True,
+            'filename': pdf_path_obj.name,
+            'file_path': str(pdf_path_obj.absolute()),
+            'file_size': file_stat.st_size,
+            'file_size_mb': round(file_stat.st_size / (1024 * 1024), 2),
+            'total_pages': result.get('total_pages', 0),
+            'word_count': result.get('word_count', 0),
+            'file_hash': result.get('file_hash'),
+            'content_signature': result.get('content_signature'),
+            'modified_date': file_stat.st_mtime,
+            'pdf_metadata': result.get('metadata', {}),
+            'error': None
+        }
+        
+        return metadata_result
+        
+    except Exception as e:
+        logger.error(f"Extract metadata tool error: {e}", exc_info=True)
+        return {
+            'success': False,
+            'pdf_path': pdf_path,
+            'error': str(e)
+        }
+
+
+@tool("Validate Extraction")
+def validate_extraction_tool(pdf_path: str, min_pages: int = 1, min_words: int = 100) -> dict:
+    """
+    Validate the quality of PDF text extraction.
+    
+    Args:
+        pdf_path: Path to PDF file
+        min_pages: Minimum expected pages (default: 1)
+        min_words: Minimum expected word count (default: 100)
+        
+    Returns:
+        dict: {
+            success: bool,
+            valid: bool,
+            quality_score: float,  # 0.0 to 1.0
+            checks: dict,  # Individual validation checks
+            warnings: list,
+            error: str | None
+        }
+    """
+    extractor = _get_extractor_instance()
+    
+    try:
+        # Extract PDF
+        result = extractor.extract_pdf(pdf_path)
+        
+        if not result['success']:
+            return {
+                'success': False,
+                'valid': False,
+                'quality_score': 0.0,
+                'error': result.get('error')
+            }
+        
+        # Validation checks
+        checks = {
+            'has_content': len(result.get('full_text', '').strip()) > 0,
+            'min_pages': result.get('total_pages', 0) >= min_pages,
+            'min_words': result.get('word_count', 0) >= min_words,
+            'no_encoding_errors': '�' not in result.get('full_text', ''),
+            'reasonable_text_length': len(result.get('full_text', '')) < 10_000_000,  # Not > 10MB text
+        }
+        
+        # Warnings
+        warnings = []
+        if not checks['has_content']:
+            warnings.append("No text content extracted")
+        if not checks['min_pages']:
+            warnings.append(f"Page count ({result.get('total_pages', 0)}) below minimum ({min_pages})")
+        if not checks['min_words']:
+            warnings.append(f"Word count ({result.get('word_count', 0)}) below minimum ({min_words})")
+        if not checks['no_encoding_errors']:
+            warnings.append("Encoding errors detected (� character found)")
+        
+        # Calculate quality score
+        passed_checks = sum(checks.values())
+        quality_score = passed_checks / len(checks)
+        
+        # Overall validity
+        valid = all(checks.values())
+        
+        validation_result = {
+            'success': True,
+            'valid': valid,
+            'quality_score': quality_score,
+            'checks': checks,
+            'warnings': warnings,
+            'total_pages': result.get('total_pages', 0),
+            'word_count': result.get('word_count', 0),
+            'error': None
+        }
+        
+        return validation_result
+        
+    except Exception as e:
+        logger.error(f"Validate extraction tool error: {e}", exc_info=True)
+        return {
+            'success': False,
+            'valid': False,
+            'quality_score': 0.0,
+            'error': str(e)
+        }
+
+
+@tool("Get Extraction Stats")
+def get_extraction_stats_tool() -> dict:
+    """
+    Get extraction tools statistics and capabilities.
+    
+    Returns:
+        dict: Tool statistics and capabilities
+    """
+    extractor = _get_extractor_instance()
+    return extractor.get_stats()
 
 # ============================================================================
 # Convenience Functions

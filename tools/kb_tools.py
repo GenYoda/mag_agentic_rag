@@ -21,6 +21,7 @@ import logging
 import json
 import numpy as np
 import faiss
+from crewai.tools import tool
 
 # Phase 3 Tool 1
 from tools.extraction_tools import ExtractionTools
@@ -459,7 +460,270 @@ class KBTools:
 
 
 # ============================================================================
-# Convenience Functions
+# ✅ ADD CREWAI TOOL WRAPPERS HERE
+# ============================================================================
+
+# Singleton instance for tools
+_kb_instance = None
+
+def _get_kb_instance() -> KBTools:
+    """Get or create KB Tools singleton instance."""
+    global _kb_instance
+    if _kb_instance is None:
+        _kb_instance = KBTools()
+        # Auto-load index if it exists
+        if FAISS_INDEX_FILE.exists():
+            _kb_instance.load_index()
+    return _kb_instance
+
+
+@tool("Index Document")
+def index_document_tool(pdf_path: str) -> dict:
+    """
+    Index a single PDF document into the knowledge base.
+    
+    Args:
+        pdf_path: Path to PDF file to index
+        
+    Returns:
+        dict: {success, chunks_indexed, kb_version, error}
+    """
+    kb = _get_kb_instance()
+    
+    # For single document, we use build_index with specific folder
+    # Or you can add a dedicated add_document method to KBTools
+    
+    try:
+        pdf_path_obj = Path(pdf_path)
+        if not pdf_path_obj.exists():
+            return {
+                'success': False,
+                'error': f'File not found: {pdf_path}'
+            }
+        
+        # Build index from parent directory (will handle deduplication)
+        result = kb.build_index(
+            input_folder=str(pdf_path_obj.parent),
+            force=False,
+            recursive=False
+        )
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error indexing document: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@tool("Index Directory")
+def index_directory_tool(directory_path: str, force: bool = False) -> dict:
+    """
+    Index all PDF documents in a directory.
+    
+    Args:
+        directory_path: Path to directory containing PDFs
+        force: Force rebuild of existing index
+        
+    Returns:
+        dict: {success, pdfs_processed, chunks_indexed, kb_version, errors}
+    """
+    kb = _get_kb_instance()
+    
+    try:
+        result = kb.build_index(
+            input_folder=directory_path,
+            force=force,
+            recursive=True
+        )
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error indexing directory: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@tool("Update Document")
+def update_document_tool(pdf_path: str) -> dict:
+    """
+    Update an existing document in the knowledge base.
+    Re-indexes if modified, skips if unchanged.
+    
+    Args:
+        pdf_path: Path to PDF file to update
+        
+    Returns:
+        dict: {success, status, chunks_updated, kb_version}
+    """
+    kb = _get_kb_instance()
+    
+    try:
+        # Check PDF status first
+        status_info = kb.check_pdf_status(pdf_path)
+        
+        if status_info['status'] == 'unchanged':
+            return {
+                'success': True,
+                'status': 'unchanged',
+                'message': 'Document unchanged, no update needed'
+            }
+        
+        # If modified or new, reindex
+        result = kb.build_index(
+            input_folder=str(Path(pdf_path).parent),
+            force=False,
+            recursive=False
+        )
+        
+        return {
+            'success': result['success'],
+            'status': status_info['status'],
+            'chunks_updated': result.get('chunks_indexed', 0),
+            'kb_version': result.get('kb_version')
+        }
+        
+    except Exception as e:
+        logger.error(f"Error updating document: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@tool("Delete Document")
+def delete_document_tool(filename: str) -> dict:
+    """
+    Delete a document from the knowledge base.
+    Removes chunks and rebuilds index.
+    
+    Args:
+        filename: Name of PDF file to delete
+        
+    Returns:
+        dict: {success, chunks_removed, kb_version}
+    """
+    kb = _get_kb_instance()
+    
+    try:
+        # Find chunks from this document
+        chunks_to_remove = [
+            chunk for chunk in kb.chunks 
+            if chunk.get('source') == filename
+        ]
+        
+        if not chunks_to_remove:
+            return {
+                'success': False,
+                'error': f'No chunks found for document: {filename}'
+            }
+        
+        # Remove chunks
+        kb.chunks = [
+            chunk for chunk in kb.chunks 
+            if chunk.get('source') != filename
+        ]
+        
+        # Rebuild index
+        if kb.chunks:
+            chunk_texts = [chunk['text'] for chunk in kb.chunks]
+            embeddings = generate_embeddings_batch(chunk_texts)
+            embeddings_array = np.array(embeddings, dtype=np.float32)
+            
+            kb.index = faiss.IndexFlatL2(EMBEDDING_DIMENSION)
+            kb.index.add(embeddings_array)
+            
+            # Save updated index
+            faiss.write_index(kb.index, str(FAISS_INDEX_FILE))
+            write_json(kb.chunks, CHUNKS_FILE)
+            
+            # Update metadata
+            kb.metadata['total_chunks'] = len(kb.chunks)
+            kb.metadata['kb_version'] = kb._calculate_kb_version()
+            write_json(kb.metadata, METADATA_FILE)
+        else:
+            # No chunks left, remove index files
+            FAISS_INDEX_FILE.unlink(missing_ok=True)
+            CHUNKS_FILE.unlink(missing_ok=True)
+        
+        # Update tracker
+        kb.tracker.remove_pdf(filename)
+        kb.tracker.save()
+        
+        return {
+            'success': True,
+            'chunks_removed': len(chunks_to_remove),
+            'kb_version': kb.metadata.get('kb_version')
+        }
+        
+    except Exception as e:
+        logger.error(f"Error deleting document: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@tool("Get KB Statistics")
+def get_kb_stats_tool() -> dict:
+    """
+    Get knowledge base statistics and metadata.
+    
+    Returns:
+        dict: {total_documents, total_chunks, kb_version, tracker_stats, metadata}
+    """
+    kb = _get_kb_instance()
+    
+    try:
+        stats = kb.get_kb_stats()
+        return {
+            'success': True,
+            **stats
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting KB stats: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+@tool("Rebuild Index")
+def rebuild_index_tool(force: bool = True) -> dict:
+    """
+    Rebuild the entire knowledge base index from scratch.
+    
+    Args:
+        force: Force rebuild even if index exists
+        
+    Returns:
+        dict: {success, pdfs_processed, chunks_indexed, kb_version}
+    """
+    kb = _get_kb_instance()
+    
+    try:
+        result = kb.build_index(
+            input_folder=None,  # Uses default INPUT_FOLDER
+            force=force,
+            recursive=True
+        )
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error rebuilding index: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': str(e)
+        }
+
+
+# ============================================================================
+# Convenience Functions (keep existing)
 # ============================================================================
 
 def build_knowledge_base(

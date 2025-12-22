@@ -21,6 +21,8 @@ Integrates:
 
 from pathlib import Path
 from typing import Dict, List, Any, Optional
+from crewai.tools import tool
+
 import logging
 import json
 import time
@@ -423,3 +425,81 @@ def cache_answer(
     """
     cache = CacheTools()
     return cache.cache_answer(query, answer, sources)
+
+# ============================================================================
+# CrewAI Tool Wrappers
+# ============================================================================
+
+@tool("Search Semantic Cache")
+def search_cache_tool(query: str, kb_version: str = None) -> dict:
+    """
+    Search semantic Q&A cache for similar previously answered questions.
+    
+    Returns cached answer if similarity > threshold and cache is valid.
+    
+    Args:
+        query: User question
+        kb_version: Current KB version hash (for invalidation)
+        
+    Returns:
+        dict: {success, cached_answer, similarity, metadata} or None if miss
+    """
+    cache = CacheTools()
+    result = cache.get_cached_answer(query)  # ✅ Fixed: was cache.search_cache()
+    
+    if result:
+        return {
+            "success": True,
+            "cached_answer": result.get("answer"),
+            "similarity": result.get("similarity"),
+            "metadata": {
+                "original_query": result.get("originalquery"),
+                "hit_count": result.get("hitcount"),
+                "cached": result.get("cached")
+            }
+        }
+    else:
+        return {"success": False, "message": "Cache miss - no similar query found"}
+
+
+@tool("Add to Cache")
+def add_to_cache_tool(query: str, answer: str, metadata: dict = None, kb_version: str = None) -> dict:
+    """
+    Add validated answer to semantic cache.
+    
+    Args:
+        query: User question
+        answer: Generated answer
+        metadata: Validation metadata (confidence, etc.)
+        kb_version: Current KB version hash
+        
+    Returns:
+        dict: {success, message}
+    """
+    cache = CacheTools()
+    sources = metadata.get("sources", []) if metadata else []
+    success = cache.cache_answer(query, answer, sources, metadata)  # ✅ Fixed: was cache.add_to_cache()
+    
+    if success:
+        return {"success": True, "message": f"Successfully cached answer for query: {query[:50]}..."}
+    else:
+        return {"success": False, "message": "Failed to cache answer"}
+
+
+@tool("Clear Cache")
+def clear_cache_tool() -> dict:
+    """
+    Clear all cache entries.
+    
+    Returns:
+        dict: {success, message, entries_cleared}
+    """
+    cache = CacheTools()
+    entries_before = len(cache.cache_data)
+    cache.clear_cache()
+    
+    return {
+        "success": True,
+        "message": "Cache cleared successfully",
+        "entries_cleared": entries_before
+    }
