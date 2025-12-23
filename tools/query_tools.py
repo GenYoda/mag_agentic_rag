@@ -467,68 +467,125 @@ def classify_query_tool(query: str) -> dict:
 
 
 @tool("Decompose Complex Query")
-def decompose_query_tool(query: str) -> list:
+def decompose_query_tool(query: str, max_subqueries: int = 3, force: bool = False) -> dict:
     """
-    Break complex multi-part query into atomic sub-queries.
-    
-    Useful for queries with multiple questions or comparisons.
+    Decompose complex query into subqueries.
     
     Args:
-        query: Complex query to decompose
-        
+        query: User query
+        max_subqueries: Max subqueries to generate
+        force: If False (default), skip decomposition. If True, run decomposition.
+    
     Returns:
-        list: List of simpler sub-questions
+        dict: {strategy, subqueries, original_query, skipped}
     """
+    # Skip if not forced (default behavior)
+    if not force:
+        logger.info("⏭️ Query decomposition skipped (force=False)")
+        return {
+            'strategy': 'single',
+            'subqueries': [query],
+            'original_query': query,
+            'skipped': True
+        }
+    
+    # force=True: Run actual decomposition
+    logger.info(f"🔧 Query decomposition forced (force=True)")
     tools = QueryTools()
-    return tools.decompose_query(query)
+    sub_queries = tools.decompose_query(query)
+    
+    return {
+        'strategy': 'decomposed' if len(sub_queries) > 1 else 'single',
+        'subqueries': sub_queries,
+        'original_query': query,
+        'count': len(sub_queries),
+        'skipped': False
+    }
 
 
 @tool("Generate Hypothetical Answer (HyDE)")
-def generate_hypothetical_answer_tool(query: str) -> str:
+def generate_hypothetical_answer_tool(query: str, force: bool = False) -> dict:
     """
-    Generate hypothetical answer for better retrieval using HyDE technique.
-    
-    Creates document-like text that helps find similar real documents.
+    Generate hypothetical answer for query expansion (HyDE).
     
     Args:
-        query: User question
-        
+        query: User query
+        force: If False (default), skip HyDE. If True, generate hypothetical answer.
+    
     Returns:
-        str: Hypothetical answer text
+        dict: {query, hypothetical_answer, expanded_query, skipped}
     """
+    # Skip if not forced
+    if not force:
+        logger.info("⏭️ HyDE skipped (force=False)")
+        return {
+            'query': query,
+            'hypothetical_answer': None,
+            'expanded_query': query,
+            'skipped': True
+        }
+    
+    # force=True: Run actual HyDE generation
+    logger.info(f"🔧 HyDE generation forced (force=True)")
     tools = QueryTools()
-    return tools.generate_hypothetical_answer(query)
+    hyde_text = tools.generate_hypothetical_answer(query)
+    
+    return {
+        'query': query,
+        'hypothetical_answer': hyde_text,
+        'expanded_query': f"{query}\n\n{hyde_text}",
+        'skipped': False
+    }
 
 
 @tool("Generate Query Variations")
-def generate_query_variations_tool(query: str, max_variations: int = 3) -> list:
+def generate_query_variations_tool(query: str, num_variations: int = 2, force: bool = False) -> dict:
     """
-    Generate alternative phrasings of the query for broader retrieval coverage.
+    Generate alternative query phrasings.
     
     Args:
-        query: Original query
-        max_variations: Number of variations to generate
-        
+        query: User query
+        num_variations: Number of variations
+        force: If False (default), skip variations. If True, generate variations.
+    
     Returns:
-        list: Query variations (includes original)
+        dict: {original_query, variations, all_queries, skipped}
     """
+    # Skip if not forced
+    if not force:
+        logger.info("⏭️ Query variations skipped (force=False)")
+        return {
+            'original_query': query,
+            'variations': [],
+            'all_queries': [query],
+            'skipped': True
+        }
+    
+    # force=True: Run actual variations generation
+    logger.info(f"🔧 Query variations forced (force=True)")
     tools = QueryTools()
-    return tools.generate_query_variations(query, max_variations)
+    variations = tools.generate_query_variations(query, num_variations)
+    
+    return {
+        'original_query': query,
+        'variations': variations[1:],  # Exclude original (first item)
+        'all_queries': variations,
+        'count': len(variations),
+        'skipped': False
+    }
 
 
 @tool("Enhance Query (Full Pipeline)")
 def enhance_query_tool(query: str) -> dict:
     """
     Complete query enhancement pipeline: classify, decompose, HyDE, variations.
-    
     This is the main entry point for query enhancement.
     
     Args:
         query: User question
-        
+    
     Returns:
         dict: Enhanced query components with all enhancements applied
     """
     tools = QueryTools()
     return tools.enhance_query(query)
-

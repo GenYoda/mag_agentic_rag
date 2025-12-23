@@ -137,12 +137,40 @@ def extract_text_from_pdf(
                 }
         
         except HttpResponseError as e:
-            # Azure API errors (quota, auth, etc.) - don't retry
-            logger.error(f"❌ Azure API error (non-retryable): {e}")
-            return {
-                'success': False,
-                'error': f'Azure API error: {str(e)}'
-            }
+            # Check status code to determine if retryable
+            status_code = getattr(e, 'status_code', None)
+            
+            if status_code in [429, 500, 503]:
+                # Retryable errors
+                error_type = {
+                    429: "⏱️ Rate limit",
+                    500: "🔥 Server error",
+                    503: "🔧 Service unavailable"
+                }.get(status_code, "HTTP error")
+                
+                logger.warning(f"{error_type} (HTTP {status_code}) on attempt {attempt}/{max_retries}")
+                
+                if attempt < max_retries:
+                    # Use longer backoff for rate limits
+                    delay = retry_delay * (3 ** (attempt - 1)) if status_code == 429 else retry_delay * (RETRY_BACKOFF ** (attempt - 1))
+                    logger.info(f"⏳ Waiting {delay} seconds before retry...")
+                    time.sleep(delay)
+                    last_error = f"HTTP {status_code}: {str(e)}"
+                else:
+                    logger.error(f"❌ All {max_retries} attempts failed (HTTP {status_code})")
+                    return {
+                        'success': False,
+                        'error': f'Azure API error after {max_retries} attempts (HTTP {status_code}): {str(e)}',
+                        'attempts': max_retries
+                    }
+            else:
+                # Non-retryable errors (auth, not found, etc.)
+                logger.error(f"❌ Azure API error (non-retryable HTTP {status_code}): {e}")
+                return {
+                    'success': False,
+                    'error': f'Azure API error (HTTP {status_code}): {str(e)}'
+                }
+
         
         except Exception as e:
             # Unknown errors - don't retry
