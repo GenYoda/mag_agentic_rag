@@ -99,15 +99,7 @@ class EnhancedMemory:
         enable_entity_memory: bool = True,
         enable_auto_summary: bool = True
     ):
-        """
-        Initialize enhanced memory.
-        
-        Args:
-            max_window_size: Number of recent exchanges to keep in full
-            max_summary_tokens: Maximum tokens for summary
-            enable_entity_memory: Enable entity tracking
-            enable_auto_summary: Automatically generate summaries
-        """
+        """Initialize enhanced memory."""
         self.max_window_size = max_window_size
         self.max_summary_tokens = max_summary_tokens
         self.enable_entity_memory = enable_entity_memory
@@ -126,6 +118,11 @@ class EnhancedMemory:
         self.entity_memory: Optional[EntityMemory] = None
         if enable_entity_memory:
             self.entity_memory = EntityMemory(max_history=50)
+        
+        # Rate limiting for summary generation
+        self.last_summary_time = 0
+        self.summary_cooldown = 60  # seconds
+
     
     def add_exchange(
         self,
@@ -262,15 +259,24 @@ class EnhancedMemory:
     
     def _update_summary(self):
         """
-        Generate summary of archived exchanges.
-        
+        Generate summary of archived exchanges with rate limiting.
         Uses LLM to create condensed summary of conversation history.
         """
+        import time
+        
+        # Rate limit check
+        current_time = time.time()
+        if current_time - self.last_summary_time < self.summary_cooldown:
+            time_until_next = int(self.summary_cooldown - (current_time - self.last_summary_time))
+            print(f"⏸️ Summary update rate limited (cooldown: {time_until_next}s remaining)")
+            return
+        
         if not self.archived_exchanges:
             return
         
         # Build text from archived exchanges
         archive_text = []
+
         for i, exchange in enumerate(self.archived_exchanges, 1):
             archive_text.append(f"Exchange {i}:")
             archive_text.append(f"Q: {exchange.question}")
@@ -300,10 +306,12 @@ Keep the summary under 200 words."""
                 max_tokens=300
             )
             
+            # Update rate limit timestamp
+            self.last_summary_time = time.time()
+            
         except Exception as e:
-            print(f"⚠️  Failed to generate summary: {e}")
-            # Fallback: Simple truncation
-            self.summary = f"Previous conversation included {len(self.archived_exchanges)} exchanges."
+            print(f"⚠️ Failed to generate summary: {e}")
+
     
     def get_token_estimate(self) -> Dict[str, int]:
         """

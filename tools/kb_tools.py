@@ -76,6 +76,72 @@ class KBTools:
         self.metadata: Dict[str, Any] = {}
         
         logger.info("KBTools initialized")
+
+
+    def reset_kb(self) -> Dict[str, Any]:
+        """
+        🆕 Reset the entire knowledge base - clear all data and start fresh.
+        
+        Deletes:
+        - FAISS index file
+        - Chunks file
+        - Metadata file
+        - Tracker file (PDF hashes)
+        
+        Returns:
+            {'success': bool, 'message': str, 'files_deleted': list}
+        """
+        try:
+            deleted_files = []
+            
+            # Delete FAISS index
+            if FAISS_INDEX_FILE.exists():
+                FAISS_INDEX_FILE.unlink()
+                deleted_files.append(str(FAISS_INDEX_FILE))
+                logger.info(f"✅ Deleted: {FAISS_INDEX_FILE}")
+            
+            # Delete chunks
+            if CHUNKS_FILE.exists():
+                CHUNKS_FILE.unlink()
+                deleted_files.append(str(CHUNKS_FILE))
+                logger.info(f"✅ Deleted: {CHUNKS_FILE}")
+            
+            # Delete metadata
+            if METADATA_FILE.exists():
+                METADATA_FILE.unlink()
+                deleted_files.append(str(METADATA_FILE))
+                logger.info(f"✅ Deleted: {METADATA_FILE}")
+            
+            # Delete tracker (clears all PDF hashes)
+            if TRACKER_FILE.exists():
+                TRACKER_FILE.unlink()
+                deleted_files.append(str(TRACKER_FILE))
+                logger.info(f"✅ Deleted: {TRACKER_FILE}")
+            
+            # Clear in-memory data
+            self.tracker.clear()
+            self.tracker.save()
+            self.index = None
+            self.chunks = []
+            self.metadata = {}
+            
+            logger.info(f"🔄 KB reset complete - deleted {len(deleted_files)} files")
+            
+            return {
+                'success': True,
+                'message': f'KB reset complete - {len(deleted_files)} files deleted',
+                'files_deleted': deleted_files
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Reset failed: {e}", exc_info=True)
+            return {
+                'success': False,
+                'error': f'Reset failed: {str(e)}'
+            }
+
+
+
     
     def check_pdf_status(self, pdf_path: str) -> Dict[str, Any]:
         """
@@ -289,8 +355,8 @@ class KBTools:
         
         try:
             embeddings = generate_embeddings_batch(
-                texts=chunk_texts,
-                show_progress=True
+                texts=chunk_texts
+               
             )
             
             # generate_embeddings_batch returns list of embeddings directly

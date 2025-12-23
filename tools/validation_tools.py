@@ -19,11 +19,124 @@ import json
 from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
 from crewai.tools import tool
+import re
+from typing import List, Dict, Any
 
 from datetime import datetime
 import os
 
 logger = logging.getLogger(__name__)
+
+# ============================================================================
+# TIER 1: Fast Rule-Based Validation (No LLM - Phase 2.1 Addition)
+# ============================================================================
+
+def quick_validate_answer(
+    query: str,
+    answer: str,
+    chunks: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Fast rule-based validation without LLM call.
+    Catches obvious failures to avoid wasting LLM validation.
+    """
+    issues = []
+    
+    # Check 1: Citation presence
+    citation_patterns = [
+        r'\[doc:\d+\]',
+        r'\[source:[^\]]+\]',
+        r'\[page:\d+\]',
+        r'\[\d+\]'
+    ]
+    has_citation = any(re.search(pattern, answer) for pattern in citation_patterns)
+    
+    if not has_citation:
+        issues.append({
+            'type': 'missing_citations',
+            'severity': 'high',
+            'description': 'Answer lacks source citations'
+        })
+    
+    # Check 2: Citation validity
+    if has_citation:
+        doc_citations = re.findall(r'\[doc:(\d+)\]', answer)
+        invalid_citations = []
+        for doc_num in doc_citations:
+            if int(doc_num) >= len(chunks):
+                invalid_citations.append(f"doc:{doc_num}")
+        
+        if invalid_citations:
+            issues.append({
+                'type': 'invalid_citations',
+                'severity': 'high',
+                'description': f'Citations reference non-existent chunks: {invalid_citations}'
+            })
+    
+    # Check 3: Uncertainty indicators
+    uncertainty_phrases = [
+        "i don't know", "i do not know", "not mentioned", "not clear",
+        "unclear", "cannot determine", "not specified",
+        "no information available", "unable to find"
+    ]
+    answer_lower = answer.lower()
+    found_uncertainty = [phrase for phrase in uncertainty_phrases if phrase in answer_lower]
+    
+    if found_uncertainty:
+        issues.append({
+            'type': 'explicit_uncertainty',
+            'severity': 'high',
+            'description': f'Answer contains uncertainty: {found_uncertainty[0]}'
+        })
+    
+    # Check 4: Extreme verbosity for simple questions
+    word_count = len(answer.split())
+    query_lower = query.lower()
+    
+    if any(q in query_lower for q in ['is it', 'is the', 'did the', 'was the', 'does the', 'can the']):
+        if word_count > 100:
+            issues.append({
+                'type': 'suspiciously_verbose',
+                'severity': 'medium',
+                'description': f'Yes/No question has {word_count} word answer'
+            })
+    
+    # Check 5: Too short
+    if word_count < 3:
+        issues.append({
+            'type': 'too_short',
+            'severity': 'medium',
+            'description': f'Answer only {word_count} words'
+        })
+    
+    # Decision
+    high_severity_issues = [i for i in issues if i['severity'] == 'high']
+    
+    return {
+        'quick_pass': len(high_severity_issues) == 0,
+        'issues': issues,
+        'total_issues': len(issues),
+        'high_severity_count': len(high_severity_issues),
+        'confidence': 'high' if len(issues) == 0 else 'low',
+        'requires_llm_validation': True
+    }
+
+
+def should_skip_llm_validation(quick_result: Dict[str, Any]) -> bool:
+    """
+    Determine if we should skip LLM validation and go straight to self-heal.
+    Only for obvious failures that don't need LLM diagnosis.
+    """
+    if not quick_result['quick_pass']:
+        issue_types = [issue['type'] for issue in quick_result['issues']]
+        skip_llm_issues = ['missing_citations', 'explicit_uncertainty', 'invalid_citations']
+        
+        if any(issue_type in skip_llm_issues for issue_type in issue_types):
+            return True
+    
+    return False
+
+
 
 
 # ============================================================================
