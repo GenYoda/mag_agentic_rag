@@ -918,3 +918,137 @@ def get_validation_summary_tool(validation_result: dict) -> str:
     )
     return validator.get_validation_summary(result)
 
+
+
+# ============================================================================
+# PHASE 3 ADDITIONS - Add to existing validation_tools.py
+# ============================================================================
+
+def enhance_validation_output(
+    validation_result: Dict[str, Any],
+    query: str,
+    chunks: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Enhance validation output with Phase 3 diagnostic info.
+    
+    Adds:
+    - Severity levels to issues
+    - Recommended healing techniques
+    - Diagnostic confidence
+    
+    Args:
+        validation_result: Output from quick_validate_answer() or validate_answer()
+        query: Original query
+        chunks: Retrieved chunks
+        
+    Returns:
+        Enhanced validation result with diagnostic metadata
+    """
+    from tools.diagnostic_engine import (
+        classify_issue_severity,
+        recommend_healing_technique,
+        diagnose_validation_failure
+    )
+    
+    # Enhance each issue with severity and recommendations
+    enhanced_issues = []
+    for issue in validation_result.get('issues', []):
+        # Add severity if not present
+        if 'severity' not in issue:
+            issue['severity'] = classify_issue_severity(
+                issue['type'],
+                validation_result
+            )
+        
+        # Add recommended technique
+        issue['recommended_technique'] = recommend_healing_technique(
+            issue['type'],
+            escalation_level=1  # Start with level 1
+        )
+        
+        # Add auto-fixable flag
+        issue['auto_fixable'] = True  # Most issues are auto-fixable
+        
+        enhanced_issues.append(issue)
+    
+    # Run diagnostic analysis
+    diagnosis = diagnose_validation_failure(
+        validation_result,
+        query,
+        chunks,
+        retry_count=0
+    )
+    
+    # Add diagnosis to result
+    validation_result['issues'] = enhanced_issues
+    validation_result['diagnosis'] = {
+        'root_cause': diagnosis.root_cause,
+        'primary_issue': diagnosis.primary_issue_type,
+        'recommended_techniques': diagnosis.recommended_techniques,
+        'escalation_level': diagnosis.escalation_level,
+        'confidence': diagnosis.confidence,
+        'issue_summary': diagnosis.issue_summary
+    }
+    
+    return validation_result
+
+
+def get_issue_severity_summary(issues: List[Dict[str, Any]]) -> Dict[str, int]:
+    """
+    Get count of issues by severity level.
+    
+    Returns:
+        {'critical': count, 'high': count, 'medium': count, 'low': count}
+    """
+    summary = {'critical': 0, 'high': 0, 'medium': 0, 'low': 0}
+    
+    for issue in issues:
+        severity = issue.get('severity', 'medium')
+        if severity in summary:
+            summary[severity] += 1
+    
+    return summary
+
+
+def should_retry_with_healing(
+    validation_result: Dict[str, Any],
+    quality_threshold: float = 0.8
+) -> bool:
+    """
+    Determine if answer should be retried with self-healing.
+    
+    Criteria:
+    - Has critical or high severity issues
+    - Quality score below threshold
+    - Has auto-fixable issues
+    
+    Args:
+        validation_result: Validation result dict
+        quality_threshold: Minimum acceptable quality score
+        
+    Returns:
+        True if healing should be attempted
+    """
+    # Check quality score
+    quality_score = validation_result.get('quality_score', 1.0)
+    if quality_score < quality_threshold:
+        return True
+    
+    # Check for critical/high issues
+    severity_summary = get_issue_severity_summary(
+        validation_result.get('issues', [])
+    )
+    if severity_summary['critical'] > 0 or severity_summary['high'] > 0:
+        return True
+    
+    # Check validation status
+    if not validation_result.get('is_valid', True):
+        return True
+    
+    return False
+
+
+# ============================================================================
+# END PHASE 3 ADDITIONS
+# ============================================================================
