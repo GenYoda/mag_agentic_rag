@@ -521,15 +521,25 @@ class CompleteRAGPipeline:
         memory_context: Dict
     ) -> Dict[str, Any]:
         """
-        Two-tier validation with self-healing (Phase 2.3).
-
+        Phase 3: Two-tier validation with INTELLIGENT self-healing.
+        
+        NEW in Phase 3:
+        - Diagnostic engine analyzes failures
+        - Technique-specific healing (not generic retry)
+        - Progressive escalation with different techniques
+        - Tracks technique effectiveness
+        
         Tier 1: Fast rule-based validation (100ms)
         Tier 2: LLM-based validation (2-3s)
-        Self-heal if either tier fails
+        Self-heal with intelligent technique selection
         """
+        from tools.diagnostic_engine import diagnose_validation_failure
+        from tools.healing_techniques import get_technique_for_issue
+        from tools.validation_tools import enhance_validation_output
+        
         answer = answer_result.get('answer', '')
         retry_count = 0
-
+        
         # Initialize best attempt fallback
         best_attempt = {
             'answer': answer,
@@ -538,10 +548,11 @@ class CompleteRAGPipeline:
         }
         best_score = 0.0
         healing_applied = False
-
+        techniques_tried = []  # Track which techniques were used
+        
         while retry_count <= SELF_HEAL_MAX_RETRIES:
             logger.info(f"🔍 Validation attempt {retry_count + 1}/{SELF_HEAL_MAX_RETRIES + 1}")
-
+            
             # =================================================================
             # TIER 1: Fast Rule-Based Validation (Phase 2.1)
             # =================================================================
@@ -550,63 +561,51 @@ class CompleteRAGPipeline:
                 answer=answer,
                 chunks=chunks
             )
-
+            
             logger.info(
                 f"Tier 1: pass={quick_result['quick_pass']}, "
                 f"issues={quick_result['total_issues']}"
             )
-
-            # Check if we should skip LLM and self-heal immediately
-            if should_skip_llm_validation(quick_result):
-                logger.info("🚀 Tier 1 failed with obvious issue - self-healing immediately")
-
-                # Skip LLM validation, go straight to self-healing
-                if retry_count >= SELF_HEAL_MAX_RETRIES:
-                    logger.warning("⚠️ Max retries reached")
-                    break
-
-                if self.enable_self_healing and self.self_healer_agent:
-                    logger.info(f"🔧 Applying self-healing (Tier 1 fail)...")
-                    self.stats['healing_attempts'] += 1
-
-                    healed_result = self._apply_self_healing(
-                        answer,
-                        query,
-                        chunks,
-                        {'tier': 'tier1', 'issues': quick_result['issues']},
-                        memory_context
-                    )
-
-                    answer = healed_result.get('answer', answer)
-                    healing_applied = True
-                    retry_count += 1
-                    continue  # Re-validate healed answer
-                else:
-                    logger.warning("⚠️ Healing disabled, returning original")
-                    break
-
+            
             # =================================================================
             # TIER 2: LLM Validation (Always run for quality check)
             # =================================================================
             logger.info("🤖 Running Tier 2: LLM validation...")
-
             validation_result = self._validate_answer(answer, query, chunks)
+            
+            # ============================================================
+            # PHASE 3: ENHANCE VALIDATION WITH DIAGNOSTIC INFO
+            # ============================================================
+            validation_result = enhance_validation_output(
+                validation_result,
+                query,
+                chunks
+            )
+            
             quality_score = validation_result.get('quality_score', 0.0)
             is_valid = validation_result.get('is_valid', False)
-
+            
             logger.info(
                 f"Tier 2: valid={is_valid}, quality={quality_score:.2f}"
             )
-
+            
+            # Log diagnostic info
+            diagnosis = validation_result.get('diagnosis', {})
+            logger.info(
+                f"Diagnosis: {diagnosis.get('root_cause', 'unknown')} | "
+                f"Recommended: {diagnosis.get('recommended_techniques', [])}"
+            )
+            
             # Track best attempt
             if quality_score > best_score:
                 best_score = quality_score
                 best_attempt = {
                     'answer': answer,
                     'validation': validation_result,
-                    'retry_count': retry_count
+                    'retry_count': retry_count,
+                    'techniques_tried': techniques_tried.copy()
                 }
-
+            
             # Check if validation passes
             if is_valid and quality_score >= SELF_HEAL_MIN_QUALITY_SCORE:
                 logger.info(f"✅ Validation passed (score: {quality_score:.2f})")
@@ -615,9 +614,10 @@ class CompleteRAGPipeline:
                     'sources': chunks,
                     'validation': validation_result,
                     'healing_applied': healing_applied,
-                    'retry_count': retry_count
+                    'retry_count': retry_count,
+                    'techniques_tried': techniques_tried
                 }
-
+            
             # Check if we should retry
             if retry_count >= SELF_HEAL_MAX_RETRIES:
                 logger.warning(
@@ -625,44 +625,182 @@ class CompleteRAGPipeline:
                     f"(score: {best_score:.2f})"
                 )
                 break
-
-            # Apply self-healing (Tier 2 fail)
+            
+            # =================================================================
+            # PHASE 3: INTELLIGENT SELF-HEALING WITH DIAGNOSTIC ENGINE
+            # =================================================================
             if self.enable_self_healing and self.self_healer_agent:
-                logger.info(f"🔧 Applying self-healing (Tier 2 fail)...")
+                logger.info(f"🔧 Applying INTELLIGENT self-healing...")
                 self.stats['healing_attempts'] += 1
-
-                healed_result = self._apply_self_healing(
+                
+                # Get diagnosis
+                diagnosis_obj = diagnose_validation_failure(
+                    validation_result,
+                    query,
+                    chunks,
+                    retry_count
+                )
+                
+                logger.info(
+                    f"Escalation Level: {diagnosis_obj.escalation_level} | "
+                    f"Technique: {diagnosis_obj.recommended_techniques[0] if diagnosis_obj.recommended_techniques else 'none'}"
+                )
+                
+                # Apply technique-specific healing
+                healed_result = self._apply_intelligent_healing(
                     answer,
                     query,
                     chunks,
                     validation_result,
+                    diagnosis_obj,
                     memory_context
                 )
-
+                
                 answer = healed_result.get('answer', answer)
+                technique_used = healed_result.get('technique_applied', 'unknown')
+                techniques_tried.append(technique_used)
+                
                 healing_applied = True
                 retry_count += 1
+                
+                logger.info(f"Technique applied: {technique_used}")
             else:
                 logger.warning("⚠️ Validation failed but healing disabled")
                 break
-
+        
         # Return best attempt if all retries exhausted
-        if best_attempt is None:
-            logger.error("No valid attempts available")
-            return {
-                'answer': answer,
-                'sources': chunks,
-                'validation': {'is_valid': False, 'quality_score': 0.0},
-                'healing_applied': healing_applied,
-                'retry_count': retry_count
-            }
-
+        logger.info(f"Returning best attempt: score={best_score:.2f}, techniques={techniques_tried}")
+        
         return {
             **best_attempt,
             'sources': chunks,
             'healing_applied': healing_applied,
             'best_attempt': True
         }
+
+
+    def _apply_intelligent_healing(
+        self,
+        answer: str,
+        query: str,
+        chunks: List[Dict],
+        validation_result: Dict,
+        diagnosis: Any,  # DiagnosisResult object
+        memory_context: Dict
+    ) -> Dict[str, Any]:
+        """
+        Phase 3: Apply intelligent, technique-specific self-healing.
+        
+        Uses diagnostic engine recommendations to select appropriate technique.
+        
+        Args:
+            answer: Current answer to improve
+            query: Original query
+            chunks: Retrieved chunks
+            validation_result: Enhanced validation result with diagnosis
+            diagnosis: DiagnosisResult from diagnostic engine
+            memory_context: Conversation context
+            
+        Returns:
+            Dict with improved answer and metadata
+        """
+        from tools.healing_techniques import get_technique_for_issue
+        
+        # Get recommended technique
+        if diagnosis.recommended_techniques:
+            technique_name = diagnosis.recommended_techniques[0]
+        else:
+            technique_name = 'regenerate_with_emphasis'
+        
+        logger.info(f"Applying technique: {technique_name} (escalation L{diagnosis.escalation_level})")
+        
+        # Get technique parameters
+        technique_params = get_technique_for_issue(
+            diagnosis.primary_issue_type,
+            escalation_level=diagnosis.escalation_level,
+            query=query,
+            chunks=chunks,
+            original_answer=answer
+        )
+        
+        # Build healing task description
+        task_description = f"""
+    INTELLIGENT SELF-HEALING TASK
+
+    VALIDATION DIAGNOSIS:
+    - Root Cause: {diagnosis.root_cause}
+    - Primary Issue: {diagnosis.primary_issue_type}
+    - Issue Summary: {diagnosis.issue_summary}
+    - Escalation Level: {diagnosis.escalation_level}
+    - Confidence: {diagnosis.confidence:.2f}
+
+    RECOMMENDED TECHNIQUE: {technique_name}
+
+    TECHNIQUE PARAMETERS:
+    {technique_params}
+
+    ORIGINAL QUERY: {query}
+
+    ORIGINAL ANSWER (needs improvement):
+    {answer}
+
+    CONTEXT CHUNKS: {len(chunks)} chunks available
+
+    MEMORY CONTEXT:
+    {memory_context}
+
+    YOUR TASK:
+    Apply the recommended technique '{technique_name}' to improve the answer.
+
+    IMPORTANT:
+    - Use the enhanced_prompt from technique_params if provided
+    - Follow the technique-specific instructions exactly
+    - If technique requires retrieving more context, use search_tool
+    - If technique requires rephrasing query, use enhance_query_tool
+    - Return the improved answer with proper citations
+
+    Return format:
+    {{
+    "answer": "improved answer text with [doc:X] citations",
+    "technique_applied": "{technique_name}",
+    "escalation_level": {diagnosis.escalation_level},
+    "improvements_made": ["list of specific improvements"]
+    }}
+    """
+        
+        # Execute healing with self-healer agent
+        task = Task(
+            description=task_description,
+            agent=self.self_healer_agent,
+            expected_output="Improved answer with healing metadata"
+        )
+        
+        crew = Crew(
+            agents=[self.self_healer_agent],
+            tasks=[task],
+            verbose=False
+        )
+        
+        result = crew.kickoff()
+        
+        # Process result
+        if isinstance(result, str):
+            self.stats['healing_successes'] += 1
+            return {
+                'answer': result,
+                'technique_applied': technique_name,
+                'escalation_level': diagnosis.escalation_level
+            }
+        elif isinstance(result, dict):
+            self.stats['healing_successes'] += 1
+            return result
+        else:
+            # Fallback
+            return {
+                'answer': answer,
+                'technique_applied': 'failed',
+                'escalation_level': diagnosis.escalation_level
+            }
 
     def _validate_answer(
         self,
