@@ -41,33 +41,68 @@ _document_intelligence_client: Optional[DocumentIntelligenceClient] = None
 # Azure OpenAI Client Factory
 # ============================================================================
 
-def get_openai_client() -> AzureOpenAI:
-    """
-    Get or create Azure OpenAI client (singleton).
+# def get_openai_client() -> AzureOpenAI:
+#     """
+#     Get or create Azure OpenAI client (singleton).
     
-    Thread-safe lazy initialization.
-    Used for both chat completions and embeddings.
+#     Thread-safe lazy initialization.
+#     Used for both chat completions and embeddings.
     
-    Returns:
-        AzureOpenAI: Configured OpenAI client
+#     Returns:
+#         AzureOpenAI: Configured OpenAI client
         
-    Example:
-        >>> client = get_openai_client()
-        >>> response = client.chat.completions.create(...)
-    """
-    global _openai_client
+#     Example:
+#         >>> client = get_openai_client()
+#         >>> response = client.chat.completions.create(...)
+#     """
+#     global _openai_client
     
+#     if _openai_client is None:
+#         with _lock:
+#             # Double-check pattern
+#             if _openai_client is None:
+#                 _openai_client = AzureOpenAI(
+#                     api_key=azure_settings.azure_openai_key,
+#                     api_version=azure_settings.azure_openai_api_version,
+#                     azure_endpoint=azure_settings.azure_openai_endpoint
+#                 )
+    
+#     return _openai_client
+
+
+# In azure_clients.py, modify get_openai_client():
+from tenacity import retry, stop_after_attempt, wait_exponential
+import httpx
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=2, min=4, max=30)
+)
+def get_openai_client() -> AzureOpenAI:
+    """Get or create Azure OpenAI client with connection pooling & retry."""
+    global _openai_client
     if _openai_client is None:
         with _lock:
-            # Double-check pattern
             if _openai_client is None:
+                # Create persistent HTTP client with connection pooling
+                http_client = httpx.Client(
+                    timeout=120.0,
+                    limits=httpx.Limits(
+                        max_connections=10,      # Reuse connections
+                        max_keepalive_connections=5
+                    )
+                )
+                
                 _openai_client = AzureOpenAI(
                     api_key=azure_settings.azure_openai_key,
                     api_version=azure_settings.azure_openai_api_version,
-                    azure_endpoint=azure_settings.azure_openai_endpoint
+                    azure_endpoint=azure_settings.azure_openai_endpoint,
+                    http_client=http_client,
+                    max_retries=3
                 )
-    
     return _openai_client
+
+
 
 
 def reset_openai_client():

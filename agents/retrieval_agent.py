@@ -22,7 +22,7 @@ Integration:
 - Supports both single and multi-query retrieval
 ================================================================================
 """
-
+from config.settings import CREW_MAX_RPM
 from crewai import Agent, LLM
 from config.settings import azure_settings
 from tools.retrieval_tools import (
@@ -53,13 +53,10 @@ def create_retrieval_agent(verbose: bool = True) -> Agent:
     # Configure Azure OpenAI LLM
     llm = LLM(
         model=f"azure/{azure_settings.azure_openai_chat_deployment}",
-        base_url=(
-            f"{azure_settings.azure_openai_endpoint}"
-            f"openai/deployments/{azure_settings.azure_openai_chat_deployment}"
-            f"/chat/completions?api-version={azure_settings.azure_openai_api_version}"
-        ),
+        base_url=azure_settings.azure_openai_endpoint,  # ✅ Just the base URL
         api_key=azure_settings.azure_openai_key,
-        temperature=0.0,  # Deterministic for retrieval
+        api_version=azure_settings.azure_openai_api_version,  # ✅ Pass api_version separately
+        temperature=0.0,
     )
     
     agent = Agent(
@@ -105,6 +102,7 @@ def create_retrieval_agent(verbose: bool = True) -> Agent:
         verbose=verbose,
         allow_delegation=False,
         max_iter=5,  # May need multiple searches for complex queries
+        max_rpm=CREW_MAX_RPM
     )
     
     return agent

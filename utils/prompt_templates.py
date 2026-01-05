@@ -34,7 +34,11 @@ Answer Style Rules:
 
 4. Add supporting details ONLY if directly relevant
 
-5. Cite sources using the file name from context, not "Document X"
+5. CITATION FORMAT: Use [Sources: filename.pdf, Page X; filename2.pdf, Pages Y-Z] format
+   - Always include BOTH filename AND page number
+   - Multiple sources: separate with semicolons
+   - Place citation at end of sentence
+
 
 6. Use conversation history to understand context and resolve references like "it", "that medication", "the patient"
 
@@ -42,13 +46,13 @@ Answer Style Rules:
 
 Answer Examples:
 Q: Was medication prescribed?
-A: Yes. Metformin 500mg twice daily. [Source: Document 1]
+A: Yes. Metformin 500mg twice daily. [Sources: medical_record.pdf, Page 2]
 
 Q: What medication?
-A: Metformin 500mg twice daily for diabetes management. [Source: Document 1]
+A: Metformin 500mg twice daily for diabetes management. [Sources: medical_record.pdf, Page 2; lab_report.pdf, Page 1]
 
 Q: Glucose level?
-A: 150 mg/dL (elevated, normal range 70-100 mg/dL). [Source: Document 1]
+A: 150 mg/dL (elevated, normal range 70-100 mg/dL). [Sources: lab_results.pdf, Page 1]
 """
 
 
@@ -66,7 +70,9 @@ INSTRUCTIONS:
 - Start with direct answer, add details only if needed
 - Use information from ALL provided documents
 - If this is a follow-up question, use the previous conversation context
-- Cite which documents you used
+- CITATION REQUIRED: Use format [Sources: filename.pdf, Page X; filename2.pdf, Pages Y-Z]
+- Every factual claim MUST have a citation with filename and page number
+
 - Prioritize documents with higher relevance scores
 
 ANSWER:
@@ -90,16 +96,15 @@ INSTRUCTIONS:
 - Start with direct answer, add details only if needed
 - Use information from ALL provided documents
 - If this is a follow-up question, use the previous conversation context
-- Cite which documents you used
+- CITATION REQUIRED: Use format [Sources: filename.pdf, Page X; filename2.pdf, Pages Y-Z]
+- Every factual claim MUST have a citation with filename and page number
+
 - Prioritize documents with higher relevance scores
 
 ANSWER:
 """
 
 
-# ============================================================================
-# SECTION 2: CONTEXT FORMATTING FUNCTION (PRESERVED FROM LEGACY)
-# ============================================================================
 
 def format_context_for_answer(retrieved_chunks: List[Dict[str, Any]]) -> str:
     """
@@ -109,10 +114,10 @@ def format_context_for_answer(retrieved_chunks: List[Dict[str, Any]]) -> str:
     
     Args:
         retrieved_chunks: List of chunk dicts with 'text'/'chunk' and 'metadata'
-        
+    
     Returns:
         str: Formatted context string
-        
+    
     Example chunk format:
         {
             'text': 'Patient presents with...',
@@ -125,8 +130,23 @@ def format_context_for_answer(retrieved_chunks: List[Dict[str, Any]]) -> str:
     context_parts = []
     
     for i, chunk in enumerate(retrieved_chunks, 1):
+        # DEFENSIVE: Handle both dict and string chunks
+        if isinstance(chunk, str):
+            # If chunk is a string, use it directly
+            context_parts.append(f"Document {i}:\n{chunk}")
+            continue
+        
+        # Handle dict chunks (expected format)
+        if not isinstance(chunk, dict):
+            # Skip invalid chunks
+            continue
+        
         # Get text (handle both 'text' and 'chunk' keys)
         text = chunk.get('text', chunk.get('chunk', ''))
+        
+        if not text:
+            # Skip empty chunks
+            continue
         
         # Get metadata
         metadata = chunk.get('metadata', {})

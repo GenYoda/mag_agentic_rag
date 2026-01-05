@@ -1,410 +1,419 @@
 """
-================================================================================
-VALIDATION AGENT - Agent 9/9
-================================================================================
-Purpose: Validate answer quality and detect hallucinations
+VALIDATION AGENT - External Quality Validator
+Purpose: Score answer quality and identify specific fixable issues
 Responsibilities:
-- Validate citation grounding (all claims backed by sources)
-- Detect hallucinations using LLM-as-Judge (model-agnostic)
-- Check answer quality and structure
-- Verify citation accuracy and completeness
-- Assign quality scores and confidence scores
-- Generate validation reports for Self-Healer Agent
-
-Tools Used:
-- validate_answer_tool: Full validation pipeline
-- get_validation_summary_tool: Human-readable summary
-
+- Score answer on 4 dimensions (0-40 total)
+- Decide ACCEPT (≥32) or HEAL (<32)
+- Identify specific actionable issues
+- Configurable LLM: Gemini OR Azure OpenAI
 Integration:
-- Works after Answer Generation Agent produces answer
-- Passes validation results to Self-Healer Agent (if enabled)
-- Final quality gate before returning to user
-- Ensures medical accuracy and citation correctness
-================================================================================
+- Called after answer generation
+- Passes issues to Self Healing Agent
+- Independent module (no inline logic in runner)
 """
 
-from crewai import Agent, LLM
+import logging
+import json
+from typing import Dict, List, Any, Optional
 from config.settings import (
-    azure_settings,
-    VALIDATION_LLM_PROVIDER,
-    VALIDATION_LLM_DEPLOYMENT,
-    MIN_QUALITY_SCORE,
-    ENABLE_SELF_HEALING
-)
-from tools.validation_tools import (
-    validate_answer_tool,
-    get_validation_summary_tool,
+    azure_settings,              # ← Import the Pydantic object
+    VALIDATOR_LLM,
+    GEMINI_API_KEY,
+    GEMINI_MODEL,
+    GEMINI_TEMPERATURE,
+    GEMINI_MAX_TOKENS,
+    AZURE_VALIDATOR_DEPLOYMENT,
+    VALIDATION_SCORE_THRESHOLD
 )
 
 
-def create_validation_agent(verbose: bool = True) -> Agent:
+logger = logging.getLogger(__name__)
+
+
+class ValidationAgent:
     """
-    Create the Validation Agent.
+    External validation agent that scores quality and identifies issues.
     
-    The Validation Agent is the quality assurance gate that ensures answers are
-    accurate, well-cited, free from hallucinations, and meet quality standards.
-    It uses a configurable LLM-as-Judge for validation (Azure OpenAI, Gemini, Claude, etc.).
+    Features:
+    - Single LLM call for scoring + diagnosis (~300ms)
+    - Configurable: Gemini (default) or Azure OpenAI
+    - 4-dimensional scoring (relevance, completeness, citations, accuracy)
+    - Decision: ACCEPT or HEAL
+    - Returns actionable issues for healing
+    """
+    
+    def __init__(self, llm_provider: str = None):
+        """
+        Initialize Validation Agent.
+        
+        Args:
+            llm_provider: "gemini" or "azure" (defaults to VALIDATOR_LLM setting)
+        """
+        self.llm_provider = llm_provider or VALIDATOR_LLM
+        logger.info(f"ValidationAgent initialized with LLM: {self.llm_provider}")
+        
+        # Validate configuration
+        if self.llm_provider == "gemini":
+            if not GEMINI_API_KEY:
+                logger.warning("Gemini API key not set, falling back to Azure")
+                self.llm_provider = "azure"
+        
+        if self.llm_provider == "azure":
+            if not azure_settings.azure_openai_key or not azure_settings.azure_openai_endpoint:
+                raise ValueError("Azure OpenAI credentials not configured")
+
+    
+    def evaluate(self, query: str, answer: str, chunks: List[Dict]) -> Dict[str, Any]:
+        """
+        Evaluate answer quality and identify issues.
+        
+        Args:
+            query: Original user question
+            answer: Generated answer to evaluate
+            chunks: Context chunks used for generation
+            
+        Returns:
+            {
+                "score": 28,  # 0-40
+                "decision": "HEAL",  # ACCEPT or HEAL
+                "confidence": 0.70,  # 0.0-1.0
+                "relevance": 7,  # 0-10
+                "completeness": 6,  # 0-10
+                "citations": 5,  # 0-10
+                "accuracy": 10,  # 0-10
+                "issues": ["Missing citation...", "Date unclear..."],
+                "reasoning": "Answer incomplete..."
+            }
+        """
+        logger.info(f"Evaluating answer quality with {self.llm_provider}...")
+        
+        try:
+            # Build evaluation prompt
+            prompt = self._build_evaluation_prompt(query, answer, chunks)
+            
+            # Call LLM
+            if self.llm_provider == "gemini":
+                response = self._call_gemini(prompt)
+                
+                # ✅ ADD THIS DEBUG BLOCK - TEMPORARY!
+                logger.error("=" * 80)
+                logger.error("🔍 GEMINI DEBUG - FULL RESPONSE:")
+                logger.error(f"Response type: {type(response)}")
+                logger.error(f"Response length: {len(response)} chars")
+                logger.error("Raw response:")
+                logger.error(repr(response))  # Shows exact string with \n, \t, etc.
+                logger.error("Pretty printed:")
+                logger.error(response)
+                logger.error("=" * 80)
+            else:
+                response = self._call_azure(prompt)
+            
+            # Parse response
+            result = self._parse_response(response)
+            
+            # Calculate decision
+            score = result.get("score", 0)
+            result["decision"] = "ACCEPT" if score >= VALIDATION_SCORE_THRESHOLD else "HEAL"
+            result["confidence"] = self._calculate_confidence(result)
+            
+            logger.info(f"Evaluation complete: score={score}/40, decision={result['decision']}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Evaluation failed: {e}", exc_info=True)
+            # Return safe fallback
+            return {
+                "score": 20,
+                "decision": "HEAL",
+                "confidence": 0.5,
+                "relevance": 5,
+                "completeness": 5,
+                "citations": 5,
+                "accuracy": 5,
+                "issues": [f"Evaluation error: {str(e)}"],
+                "reasoning": "Validation failed, defaulting to healing"
+            }
+    
+    def _build_evaluation_prompt(self, query: str, answer: str, chunks: List[Dict]) -> str:
+        """Build evaluation prompt for LLM."""
+        
+        # Prepare context summary
+        context_text = "\n\n".join([
+            f"[Chunk {i+1}]: {chunk.get('text', str(chunk))[:300]}..."
+            for i, chunk in enumerate(chunks[:5])
+        ])
+        
+        prompt = f"""You are a medical RAG answer quality evaluator. Score this answer on 4 dimensions.
+
+QUERY: {query}
+
+ANSWER TO EVALUATE:
+{answer}
+
+AVAILABLE CONTEXT (5 chunks):
+{context_text}
+
+SCORING INSTRUCTIONS:
+
+1. RELEVANCE (0-10): Does answer directly address the query?
+   - 10 = Directly answers, on-topic
+   - 7-9 = Mostly relevant, some tangent
+   - 4-6 = Partially relevant
+   - 0-3 = Off-topic or unclear
+
+2. COMPLETENESS (0-10): Is answer sufficiently detailed for query complexity?
+   - Simple query ("Who is X?"): 10 = name + role + key fact
+   - Complex query ("What procedures?"): 10 = all procedures + dates + outcomes
+   - 7-9 = Adequate detail
+   - 4-6 = Too brief
+   - 0-3 = Severely incomplete
+
+3. CITATIONS (0-10): Are factual claims properly cited with [doc:X]?
+   - 10 = Multiple citations, all claims cited
+   - 7-9 = 2-3 citations, most claims cited
+   - 4-6 = 1 citation or sparse citations
+   - 0-3 = No citations or wrong format
+
+4. ACCURACY (0-10): Do facts match the context?
+   - 10 = All facts directly from context
+   - 7-9 = Mostly accurate, minor interpretation
+   - 4-6 = Some questionable facts
+   - 0-3 = Contradicts context or hallucinations
+
+IDENTIFY ISSUES:
+List specific actionable problems (if any):
+- "Missing citation for [specific claim]"
+- "Date not specified for [event]"
+- "Hospital name not mentioned"
+- "Procedure details incomplete"
+- etc.
+
+Respond ONLY with JSON:
+{{
+  "relevance": 0-10,
+  "completeness": 0-10,
+  "citations": 0-10,
+  "accuracy": 0-10,
+  "score": 0-40 (sum of above),
+  "issues": [
+    "specific issue 1",
+    "specific issue 2"
+  ],
+  "reasoning": "brief explanation (2-3 sentences)"
+}}
+
+Evaluate now:"""
+        
+        return prompt
+    
+    def _call_gemini(self, prompt: str) -> str:
+        """Call Gemini API using new google-genai package."""
+        try:
+            from google import genai
+            from google.genai import types
+            
+            # Configure client
+            client = genai.Client(api_key=GEMINI_API_KEY)
+            
+            # ✅ HARDCODED: Force high token limit to prevent truncation
+            max_tokens = 2000  # Way more than needed
+            
+            logger.debug(f"Calling Gemini with max_output_tokens={max_tokens}")
+            
+            # Generate response
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    temperature=GEMINI_TEMPERATURE,
+                    max_output_tokens=max_tokens,  # ✅ Hardcoded
+                    response_mime_type="application/json"
+                )
+            )
+            
+            # Extract response with detailed checking
+            response_text = None
+            
+            # Method 1: Try accessing through candidates
+            if hasattr(response, 'candidates') and response.candidates:
+                candidate = response.candidates[0]
+                
+                # Log finish reason
+                if hasattr(candidate, 'finish_reason'):
+                    finish_reason = str(candidate.finish_reason)
+                    logger.debug(f"Gemini finish reason: {finish_reason}")
+                    
+                    if "MAX_TOKENS" in finish_reason or "LENGTH" in finish_reason:
+                        logger.error(f"⚠️ Gemini response truncated! Finish reason: {finish_reason}")
+                
+                # Extract text from parts
+                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                    parts = candidate.content.parts
+                    if parts:
+                        response_text = parts[0].text
+                        logger.debug(f"Extracted from parts: {len(response_text)} chars")
+            
+            # Method 2: Try direct text attribute
+            if not response_text and hasattr(response, 'text'):
+                response_text = response.text
+                logger.debug(f"Extracted from .text: {len(response_text)} chars")
+            
+            # Method 3: Try str conversion
+            if not response_text:
+                response_text = str(response)
+                logger.warning(f"Fell back to str(response): {len(response_text)} chars")
+            
+            # Validate response
+            if not response_text:
+                raise ValueError("Gemini returned empty response")
+            
+            if len(response_text.strip()) < 50:
+                raise ValueError(f"Gemini response too short ({len(response_text)} chars): {response_text}")
+            
+            if not response_text.strip().endswith('}'):
+                logger.warning(f"⚠️ Gemini response might be incomplete - no closing brace")
+                logger.warning(f"Response: {response_text}")
+            
+            logger.debug(f"✅ Gemini full response: {len(response_text)} chars")
+            
+            return response_text
+            
+        except ImportError:
+            logger.error("google-genai package not installed. Run: pip install google-genai")
+            raise
+        except Exception as e:
+            logger.error(f"Gemini API call failed: {e}")
+            logger.error(f"Exception details: {type(e).__name__}: {str(e)}")
+            raise
+
+
+    
+    def _call_azure(self, prompt: str) -> str:
+        """Call Azure OpenAI API."""
+        try:
+            from utils.azure_clients import get_openai_client
+            from config.settings import azure_settings
+            
+            client = get_openai_client()
+            response = client.chat.completions.create(
+                model=AZURE_VALIDATOR_DEPLOYMENT,  # ← Use model= not deployment_name=
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1,
+                max_tokens=500
+            )
+            
+            return response.choices[0].message.content
+
+            
+        except Exception as e:
+            logger.error(f"Azure API call failed: {e}")
+            raise
+    
+    def _parse_response(self, response: str) -> Dict[str, Any]:
+        """Parse LLM response to extract scores and issues."""
+        try:
+            # Clean response
+            response = response.strip()
+            
+            # Remove markdown code blocks if present
+            if response.startswith("```json"):
+                response = response.split("```json")[1].split("```")[0]
+            elif response.startswith("```"):
+                response = response.split("```")[1].split("```")[0]
+            
+            # Parse JSON
+            result = json.loads(response.strip())
+            
+            # Validate required fields
+            required = ["relevance", "completeness", "citations", "accuracy"]
+            for field in required:
+                if field not in result:
+                    logger.warning(f"Missing field: {field}, defaulting to 5")
+                    result[field] = 5
+            
+            # Calculate total score if missing
+            if "score" not in result:
+                result["score"] = (
+                    result["relevance"] + 
+                    result["completeness"] + 
+                    result["citations"] + 
+                    result["accuracy"]
+                )
+            
+            # Ensure issues list
+            if "issues" not in result:
+                result["issues"] = []
+            
+            # Ensure reasoning
+            if "reasoning" not in result:
+                result["reasoning"] = "No reasoning provided"
+            
+            return result
+            
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {e}")
+            logger.error(f"Response was: {response[:200]}...")
+            # Return fallback
+            return {
+                "relevance": 5,
+                "completeness": 5,
+                "citations": 5,
+                "accuracy": 5,
+                "score": 20,
+                "issues": ["Parse error in validation"],
+                "reasoning": f"Failed to parse validation response: {str(e)}"
+            }
+        except Exception as e:
+            logger.error(f"Unexpected parse error: {e}")
+            return {
+                "relevance": 5,
+                "completeness": 5,
+                "citations": 5,
+                "accuracy": 5,
+                "score": 20,
+                "issues": [f"Parse error: {str(e)}"],
+                "reasoning": "Unexpected parsing error"
+            }
+
+    
+    def _calculate_confidence(self, result: Dict[str, Any]) -> float:
+        """Calculate confidence score (0.0-1.0) based on validation results."""
+        score = result.get("score", 0)
+        
+        # Base confidence from score
+        confidence = score / 40.0
+        
+        # Boost for strong citations
+        if result.get("citations", 0) >= 8:
+            confidence += 0.05
+        
+        # Boost for high accuracy
+        if result.get("accuracy", 0) >= 9:
+            confidence += 0.05
+        
+        # Penalty for issues
+        issue_count = len(result.get("issues", []))
+        if issue_count > 3:
+            confidence -= 0.10
+        
+        # Cap at 0.95
+        return min(max(confidence, 0.0), 0.95)
+
+
+# Convenience function
+def create_validation_agent(llm_provider: str = None) -> ValidationAgent:
+    """
+    Create a ValidationAgent instance.
     
     Args:
-        verbose: Enable verbose logging for debugging
-        
+        llm_provider: "gemini" or "azure" (defaults to config setting)
+    
     Returns:
-        CrewAI Agent instance configured for answer validation
-        
+        ValidationAgent instance
+    
     Example:
-        >>> validation_agent = create_validation_agent(verbose=True)
-        >>> # Use in a Crew to validate generated answers
+        validator = create_validation_agent("gemini")
+        result = validator.evaluate(query, answer, chunks)
+        print(f"Score: {result['score']}/40, Decision: {result['decision']}")
     """
-    # Configure LLM for the agent itself (uses Azure OpenAI for agent reasoning)
-    llm = LLM(
-        model=f"azure/{azure_settings.azure_openai_chat_deployment}",
-        base_url=(
-            f"{azure_settings.azure_openai_endpoint}"
-            f"openai/deployments/{azure_settings.azure_openai_chat_deployment}"
-            f"/chat/completions?api-version={azure_settings.azure_openai_api_version}"
-        ),
-        api_key=azure_settings.azure_openai_key,
-        temperature=0.0,  # Deterministic for validation
-    )
-    
-    # Build dynamic backstory based on configuration
-    self_healing_note = ""
-    if ENABLE_SELF_HEALING:
-        self_healing_note = (
-            "\n\nWhen validation fails, your detailed validation report is passed to the "
-            "Self-Healer Agent, which analyzes issues and determines corrective actions. "
-            "Your job is to provide clear, actionable validation results."
-        )
-    
-    agent = Agent(
-        role="Quality Assurance Specialist",
-        
-        goal=(
-            "Validate answer quality, detect hallucinations, ensure citation accuracy, "
-            "and assign quality scores. Act as the quality gate to ensure only high-quality, "
-            "accurate answers reach users."
-        ),
-        
-        backstory=(
-            "You are an expert fact-checker and quality assurance specialist for medical "
-            "question-answering systems. You have the critical responsibility of ensuring "
-            "that every answer is accurate, well-cited, and free from hallucinations.\n\n"
-            f"Configuration: Using {VALIDATION_LLM_PROVIDER} ({VALIDATION_LLM_DEPLOYMENT}) "
-            f"as LLM-as-Judge for hallucination detection.\n\n"
-            "Your validation framework:\n\n"
-            
-            "1. CITATION GROUNDING VALIDATION:\n"
-            "   - Every factual claim MUST have a citation [doc:X]\n"
-            "   - Citations must correspond to actual source chunks\n"
-            "   - No orphaned citations (citations without corresponding sources)\n"
-            "   - No missing citations (claims without source attribution)\n"
-            "   - Example PASS: 'Patient diagnosed with hypertension [doc:1]'\n"
-            "   - Example FAIL: 'Patient has diabetes' (no citation)\n\n"
-            
-            "2. HALLUCINATION DETECTION (LLM-as-Judge):\n"
-            "   - Use configured LLM judge to evaluate if answer is grounded in context\n"
-            "   - Ask: 'Is this claim explicitly stated in the provided context?'\n"
-            "   - Detect invented facts, assumptions, or general knowledge not in context\n"
-            "   - Flag uncertain language ('possibly', 'might be', 'could be')\n"
-            "   - Check for dates, names, numbers not present in sources\n\n"
-            
-            "   Example hallucination scenarios:\n"
-            "   - Context: 'Patient prescribed Lisinopril'\n"
-            "   - Answer: 'Patient prescribed Lisinopril 10mg' ❌ (dosage not in context)\n"
-            "   - Correct: 'Patient prescribed Lisinopril [doc:1]' ✓\n\n"
-            
-            "3. QUALITY SCORING:\n"
-            "   - Completeness: Does answer fully address the query? (0-25 points)\n"
-            "   - Accuracy: Are all facts correct and grounded? (0-25 points)\n"
-            "   - Citations: Proper citation format and coverage? (0-25 points)\n"
-            "   - Clarity: Clear, concise, well-structured? (0-25 points)\n"
-            "   - Total quality score: 0.0 to 1.0 (sum/100)\n\n"
-            
-            "   Quality thresholds:\n"
-            f"   - ≥ {MIN_QUALITY_SCORE}: PASS - acceptable quality\n"
-            f"   - < {MIN_QUALITY_SCORE}: FAIL - needs improvement\n\n"
-            
-            "4. CITATION ACCURACY:\n"
-            "   - Verify [doc:X] format is correct\n"
-            "   - Check that doc:X corresponds to actual chunk ID\n"
-            "   - Ensure claim content matches cited source\n"
-            "   - Flag misattributions (claim doesn't match source)\n\n"
-            
-            "5. STRUCTURAL VALIDATION:\n"
-            "   - Answer length: Not too short (<50 chars) or too long (>2000 chars)\n"
-            "   - Has direct answer to question (not just context dump)\n"
-            "   - Proper formatting (bullets, paragraphs where appropriate)\n"
-            "   - No repetition or redundancy\n\n"
-            
-            "6. MEDICAL CONTENT VALIDATION:\n"
-            "   - Medical terminology used correctly\n"
-            "   - No contradictory statements within answer\n"
-            "   - Appropriate level of detail for query\n"
-            "   - No misleading or ambiguous phrasing\n\n"
-            
-            "7. QUESTION TYPE AWARENESS:\n"
-            "   - Multiple Choice: Ensure single correct option selected with reasoning\n"
-            "   - True/False: Clear boolean answer with justification\n"
-            "   - Short Answer: Concise, direct response\n"
-            "   - Bullet Points: Use bullets if question asks for list\n"
-            "   - Verify answer format matches question type\n\n"
-            
-            "8. VALIDATION REPORT STRUCTURE:\n"
-            "   Always provide detailed validation report:\n"
-            "   {\n"
-            "     'is_valid': bool,\n"
-            "     'quality_score': 0.0-1.0,\n"
-            "     'confidence_score': 0.0-1.0,\n"
-            "     'has_hallucination': bool,\n"
-            "     'has_citations': bool,\n"
-            "     'citation_count': int,\n"
-            "     'issues': [list of ValidationIssue with category, severity, message],\n"
-            "     'warnings': [list of strings],\n"
-            "     'llm_judge_used': bool,\n"
-            "     'llm_judge_reasoning': str,\n"
-            "     'recommendation': 'pass' | 'regenerate' | 'manual_review'\n"
-            "   }\n\n"
-            
-            "Issue categories:\n"
-            "   - 'citations': Missing or incorrect citations\n"
-            "   - 'hallucination': Invented information not in context\n"
-            "   - 'completeness': Incomplete answer or missing sub-questions\n"
-            "   - 'quality': Structure, clarity, formatting issues\n"
-            "   - 'citation_mismatch': Citation points to wrong source\n"
-            "   - 'safety': Inappropriate content\n\n"
-            
-            f"{self_healing_note}\n\n"
-            
-            "Your validation directly impacts patient safety and trust in the system. "
-            "You are the quality gate against incorrect or misleading medical information. "
-            "When in doubt, err on the side of caution and mark validation as failed.\n\n"
-            
-            "Critical validation rules:\n"
-            "- NEVER pass an answer with hallucinations\n"
-            "- NEVER pass an answer with missing citations on factual claims\n"
-            "- NEVER pass an answer that contradicts source documents\n"
-            "- ALWAYS provide clear reasoning for validation decisions\n"
-            "- ALWAYS categorize issues correctly for Self-Healer\n"
-            "- ALWAYS consider question type when validating format"
-        ),
-        
-        tools=[
-            validate_answer_tool,           # Full validation pipeline (uses LLM-as-Judge)
-            get_validation_summary_tool,    # Human-readable summary
-        ],
-        
-        llm=llm,  # Use configured Azure OpenAI LLM for agent reasoning
-        verbose=verbose,
-        allow_delegation=False,  # Validation only; Self-Healer handles regeneration
-        max_iter=3,  # Validation should be quick
-    )
-    
-    return agent
-
-
-def get_validation_agent(**kwargs) -> Agent:
-    """
-    Convenience function to get validation agent with default settings.
-    
-    Args:
-        **kwargs: Additional arguments passed to create_validation_agent
-        
-    Returns:
-        Validation Agent instance
-        
-    Example:
-        >>> agent = get_validation_agent(verbose=False)
-    """
-    return create_validation_agent(**kwargs)
-
-
-# Export for easy imports
-__all__ = ['create_validation_agent', 'get_validation_agent']
-
-# """
-# ================================================================================
-# VALIDATION AGENT - Agent 9/9 (FINAL)
-# ================================================================================
-# Purpose: Validate answer quality and detect hallucinations
-# Responsibilities:
-# - Validate citation grounding (all claims backed by sources)
-# - Detect hallucinations using LLM-as-Judge
-# - Check answer quality and structure
-# - Verify citation accuracy and completeness
-# - Self-heal low-quality answers (trigger regeneration)
-# - Assign quality scores
-
-# Tools Used:
-# - validate_answer_tool: Full validation pipeline
-# - check_citations_tool: Verify citation accuracy
-# - detect_hallucinations_tool: LLM-as-Judge hallucination detection
-# - get_validation_summary_tool: Human-readable summary
-# - suggest_improvements_tool: Recommend answer improvements
-
-# Integration:
-# - Works after Answer Generation Agent produces answer
-# - Final quality gate before returning to user
-# - Can delegate back to Answer Agent for regeneration
-# - Ensures medical accuracy and citation correctness
-# ================================================================================
-# """
-
-# from crewai import Agent, LLM
-# from config.settings import azure_settings
-# from tools.validation_tools import (
-#     validate_answer_tool,
-#     get_validation_summary_tool,
-# )
-
-
-# def create_validation_agent(verbose: bool = True) -> Agent:
-#     """
-#     Create the Validation Agent.
-    
-#     The Validation Agent is the final quality gate that ensures answers are
-#     accurate, well-cited, free from hallucinations, and meet quality standards
-#     before being returned to users.
-    
-#     Args:
-#         verbose: Enable verbose logging for debugging
-        
-#     Returns:
-#         CrewAI Agent instance configured for answer validation
-        
-#     Example:
-#         >>> validation_agent = create_validation_agent(verbose=True)
-#         >>> # Use in a Crew to validate generated answers
-#     """
-#     # Configure Azure OpenAI LLM
-#     llm = LLM(
-#         model=f"azure/{azure_settings.azure_openai_chat_deployment}",
-#         base_url=(
-#             f"{azure_settings.azure_openai_endpoint}"
-#             f"openai/deployments/{azure_settings.azure_openai_chat_deployment}"
-#             f"/chat/completions?api-version={azure_settings.azure_openai_api_version}"
-#         ),
-#         api_key=azure_settings.azure_openai_key,
-#         temperature=0.0,  # Deterministic for validation
-#     )
-    
-#     agent = Agent(
-#         role="Quality Assurance Specialist",
-        
-#         goal=(
-#             "Validate answer quality, detect hallucinations, ensure citation accuracy, "
-#             "and trigger self-correction when needed. Act as the final quality gate to "
-#             "ensure only high-quality, accurate answers reach users."
-#         ),
-        
-#         backstory=(
-#             "You are an expert fact-checker and quality assurance specialist for medical "
-#             "question-answering systems. You have the critical responsibility of ensuring "
-#             "that every answer is accurate, well-cited, and free from hallucinations.\n\n"
-#             "Your validation framework:\n\n"
-#             "1. CITATION GROUNDING VALIDATION:\n"
-#             "   - Every factual claim MUST have a citation [doc:X]\n"
-#             "   - Citations must correspond to actual source chunks\n"
-#             "   - No orphaned citations (citations without corresponding sources)\n"
-#             "   - No missing citations (claims without source attribution)\n"
-#             "   - Example PASS: 'Patient diagnosed with hypertension [doc:1]'\n"
-#             "   - Example FAIL: 'Patient has diabetes' (no citation)\n\n"
-#             "2. HALLUCINATION DETECTION (LLM-as-Judge):\n"
-#             "   - Use GPT-4 to judge if answer is grounded in context\n"
-#             "   - Ask: 'Is this claim explicitly stated in the provided context?'\n"
-#             "   - Detect invented facts, assumptions, or general knowledge not in context\n"
-#             "   - Flag uncertain language ('possibly', 'might be', 'could be')\n"
-#             "   - Check for dates, names, numbers not present in sources\n\n"
-#             "   Example hallucination scenarios:\n"
-#             "   - Context: 'Patient prescribed Lisinopril'\n"
-#             "   - Answer: 'Patient prescribed Lisinopril 10mg' ❌ (dosage not in context)\n"
-#             "   - Correct: 'Patient prescribed Lisinopril [doc:1]' ✓\n\n"
-#             "3. QUALITY SCORING:\n"
-#             "   - Completeness: Does answer fully address the query? (0-25 points)\n"
-#             "   - Accuracy: Are all facts correct and grounded? (0-25 points)\n"
-#             "   - Citations: Proper citation format and coverage? (0-25 points)\n"
-#             "   - Clarity: Clear, concise, well-structured? (0-25 points)\n"
-#             "   - Total quality score: 0.0 to 1.0 (sum/100)\n\n"
-#             "   Quality thresholds:\n"
-#             "   - ≥ 0.90: Excellent - ready for user\n"
-#             "   - 0.70-0.89: Good - minor improvements suggested\n"
-#             "   - 0.50-0.69: Fair - regeneration recommended\n"
-#             "   - < 0.50: Poor - regeneration required\n\n"
-#             "4. CITATION ACCURACY:\n"
-#             "   - Verify [doc:X] format is correct\n"
-#             "   - Check that doc:X corresponds to actual chunk ID\n"
-#             "   - Ensure claim content matches cited source\n"
-#             "   - Flag misattributions (claim doesn't match source)\n\n"
-#             "5. STRUCTURAL VALIDATION:\n"
-#             "   - Answer length: Not too short (<50 chars) or too long (>2000 chars)\n"
-#             "   - Has direct answer to question (not just context dump)\n"
-#             "   - Proper formatting (bullets, paragraphs where appropriate)\n"
-#             "   - No repetition or redundancy\n\n"
-#             "6. MEDICAL CONTENT VALIDATION:\n"
-#             "   - Medical terminology used correctly\n"
-#             "   - No contradictory statements within answer\n"
-#             "   - Appropriate level of detail for query\n"
-#             "   - No misleading or ambiguous phrasing\n\n"
-#             "7. SELF-HEALING WORKFLOW:\n"
-#             "   When quality score < 0.70:\n"
-#             "   a) Identify specific issues (missing citations, hallucinations, etc.)\n"
-#             "   b) Generate improvement suggestions\n"
-#             "   c) Delegate back to Answer Generation Agent with fixes\n"
-#             "   d) Re-validate regenerated answer\n"
-#             "   e) Max 2 regeneration attempts to avoid loops\n\n"
-#             "8. VALIDATION REPORT:\n"
-#             "   Always provide detailed validation report:\n"
-#             "   {\n"
-#             "     'is_valid': bool,\n"
-#             "     'quality_score': 0.0-1.0,\n"
-#             "     'confidence_score': 0.0-1.0,\n"
-#             "     'has_hallucination': bool,\n"
-#             "     'has_citations': bool,\n"
-#             "     'citation_count': int,\n"
-#             "     'issues': [list of ValidationIssue],\n"
-#             "     'warnings': [list of strings],\n"
-#             "     'llm_judge_reasoning': str,\n"
-#             "     'recommendation': 'pass' | 'regenerate' | 'manual_review'\n"
-#             "   }\n\n"
-#             "Your validation directly impacts patient safety and trust in the system. "
-#             "You are the last line of defense against incorrect or misleading medical information. "
-#             "When in doubt, err on the side of caution and request regeneration or manual review.\n\n"
-#             "Critical validation rules:\n"
-#             "- NEVER pass an answer with hallucinations\n"
-#             "- NEVER pass an answer with missing citations on factual claims\n"
-#             "- NEVER pass an answer that contradicts source documents\n"
-#             "- ALWAYS provide clear reasoning for validation decisions\n"
-#             "- ALWAYS suggest specific improvements for failed validation"
-#         ),
-        
-#         tools=[
-#             validate_answer_tool,           # Full validation pipeline
-#             get_validation_summary_tool,    # Human-readable summary
-#         ],
-        
-#         llm=llm,  # Use configured Azure OpenAI LLM
-#         verbose=verbose,
-#         allow_delegation=True,  # Can delegate to Answer Agent for regeneration
-#         max_iter=5,  # May need multiple validation rounds
-#     )
-    
-#     return agent
-
-
-# def get_validation_agent(**kwargs) -> Agent:
-#     """
-#     Convenience function to get validation agent with default settings.
-    
-#     Args:
-#         **kwargs: Additional arguments passed to create_validation_agent
-        
-#     Returns:
-#         Validation Agent instance
-        
-#     Example:
-#         >>> agent = get_validation_agent(verbose=False)
-#     """
-#     return create_validation_agent(**kwargs)
-
-
-# # Export for easy imports
-# __all__ = ['create_validation_agent', 'get_validation_agent']
+    return ValidationAgent(llm_provider=llm_provider)

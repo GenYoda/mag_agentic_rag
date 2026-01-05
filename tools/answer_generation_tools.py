@@ -112,10 +112,18 @@ class AnswerGenerationTools:
             
             if not retrieved_chunks:
                 return {
-                    'success': False,
-                    'query': query,
-                    'error': 'No relevant context found'
+                    "success": True,  # Don't fail the pipeline
+                    "query": query,
+                    "answer": "I could not find any relevant information in the knowledge base to answer this question. Please ensure documents are indexed or rephrase your query.",
+                    "sources": [],
+                    "metadata": {
+                        "chunks_retrieved": 0,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                        "had_conversation_history": conversation_history is not None
+                    }
                 }
+
             
             logger.info(f"Retrieved {len(retrieved_chunks)} chunks")
             

@@ -24,7 +24,7 @@ Integration:
 from crewai import Agent, LLM
 from config.settings import azure_settings  # ✅ Fixed import
 from tools.cache_tools import search_cache_tool, add_to_cache_tool, clear_cache_tool
-
+from config.settings import CREW_MAX_RPM
 
 def create_cache_agent(verbose: bool = True) -> Agent:
     # Debug: Verify settings loaded
@@ -32,11 +32,12 @@ def create_cache_agent(verbose: bool = True) -> Agent:
     print(f"Azure Key exists: {bool(azure_settings.azure_openai_key)}")
     print(f"Deployment: {azure_settings.azure_openai_chat_deployment}")
     
-    # ✅ Use CrewAI's LLM class with Azure format
+  
     llm = LLM(
         model=f"azure/{azure_settings.azure_openai_chat_deployment}",
-        base_url=f"{azure_settings.azure_openai_endpoint}openai/deployments/{azure_settings.azure_openai_chat_deployment}/chat/completions?api-version={azure_settings.azure_openai_api_version}",
+        base_url=azure_settings.azure_openai_endpoint,  # ✅ Just the base URL
         api_key=azure_settings.azure_openai_key,
+        api_version=azure_settings.azure_openai_api_version,  # ✅ Pass api_version separately
         temperature=0.1,
     )
 
@@ -57,6 +58,7 @@ def create_cache_agent(verbose: bool = True) -> Agent:
         verbose=verbose,
         allow_delegation=False,
         max_iter=3,
+        max_rpm=CREW_MAX_RPM
     )
     return agent
 
@@ -79,3 +81,8 @@ def get_cache_agent(**kwargs) -> Agent:
 
 # Export for easy imports
 __all__ = ['create_cache_agent', 'get_cache_agent']
+
+
+
+
+
